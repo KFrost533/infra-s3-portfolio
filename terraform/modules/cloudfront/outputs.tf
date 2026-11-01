@@ -3,6 +3,11 @@ output "distribution_arn" {
   value       = aws_cloudfront_distribution.portfolio.arn
 }
 
+output "distribution_id" {
+  description = "Distribution ID for deployment cache invalidation."
+  value       = aws_cloudfront_distribution.portfolio.id
+}
+
 output "distribution_domain_name" {
   description = "CloudFront distribution domain name."
   value       = aws_cloudfront_distribution.portfolio.domain_name

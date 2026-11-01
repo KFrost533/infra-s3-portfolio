@@ -47,5 +47,18 @@ variable "github_oidc_provider_arn" {
 variable "deploy_role_name" {
   description = "IAM role name used by the GitHub Actions deployment."
   type        = string
-  default     = "portfolio-github-actions-deploy"
+  default     = "portfolio-deploy-role"
+}
+
+variable "enable_request_report" {
+  description = "Create the weekly CloudFront request report resources."
+  type        = bool
+  default     = false
+}
+
+variable "request_report_email" {
+  description = "SNS email recipient for the weekly request report."
+  type        = string
+  default     = ""
+  sensitive   = true
 }

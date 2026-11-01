@@ -1,6 +1,10 @@
-name: Deploy portfolio HTML to S3
+name: Deploy portfolio HTML files to S3
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "portfolio/**"
   workflow_dispatch:
 
 permissions:
@@ -37,9 +41,11 @@ jobs:
           import sys
           from urllib.parse import quote
 
-          if not all(os.environ[name].strip() for name in ("AWS_REGION", "AWS_ROLE_ARN", "PORTFOLIO_BUCKET")):
+          required = ("AWS_REGION", "AWS_ROLE_ARN", "PORTFOLIO_BUCKET")
+          if not all(os.environ[name].strip() for name in required):
               sys.exit("Configure the AWS_REGION, AWS_ROLE_ARN and PORTFOLIO_BUCKET repository variables.")
           workspace = pathlib.Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+          
           tracked = subprocess.run(
               ["git", "ls-files", "-z", "--", "portfolio/jp", "portfolio/en"],
               cwd=workspace,
@@ -98,6 +104,58 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
+      - name: Find the portfolio CloudFront distribution
+        id: distribution
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          PORTFOLIO_BUCKET: ${{ vars.PORTFOLIO_BUCKET }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+
+          def aws_json(*args):
+              try:
+                  result = subprocess.run(
+                      ["aws", "cloudfront", *args, "--output", "json", "--no-cli-pager"],
+                      check=True, stdout=subprocess.PIPE, text=True,
+                  )
+              except subprocess.CalledProcessError:
+                  sys.exit(f"CloudFront {args[0]} failed; see the AWS error above.")
+              return json.loads(result.stdout)
+
+          response = aws_json("list-distributions")
+          matches = []
+
+          for distribution in response["DistributionList"].get("Items", []):
+              tags = aws_json("list-tags-for-resource", "--resource", distribution["ARN"])
+              if any(tag["Key"] == "Project" and tag["Value"] == "portfolio" for tag in tags["Tags"].get("Items", [])):
+                  matches.append(distribution)
+
+              if len(matches) != 1:
+                sys.exit(f"Expected exactly one CloudFront distribution tagged Project=portfolio; found {len(matches)}.")
+              distribution_id = matches[0]["Id"]
+
+          if not re.fullmatch(r"[A-Z0-9]{1,32}", distribution_id):
+            sys.exit("The discovered CloudFront distribution ID is invalid.")
+
+          distribution = aws_json("get-distribution", "--id", distribution_id)["Distribution"]
+          expected_origin = f'{os.environ["PORTFOLIO_BUCKET"]}.s3.{os.environ["AWS_REGION"]}.amazonaws.com'
+          origins = distribution["DistributionConfig"]["Origins"]["Items"]
+
+          if not any(origin["DomainName"] == expected_origin for origin in origins):
+              sys.exit("The matched CloudFront distribution does not use the configured portfolio bucket as an origin.")
+
+            with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"distribution_id={distribution_id}\n")
+
+              print("Found one authorised portfolio distribution with the configured S3 origin.")
+
+          PY
+
       - name: Upload portfolio HTML to S3
         env:
           BUCKET: ${{ vars.PORTFOLIO_BUCKET }}
@@ -120,3 +178,18 @@ jobs:
             --content-type "text/html; charset=utf-8" \
             --cache-control "no-cache, no-store, must-revalidate" \
             --no-cli-pager
+
+      - name: Invalidate CloudFront cache
+        env:
+          DISTRIBUTION_ID: ${{ steps.distribution.outputs.distribution_id }}
+        run: |
+          invalidation_id=$(aws cloudfront create-invalidation \
+              --distribution-id "$DISTRIBUTION_ID" \
+              --paths '/*' \
+              --query 'Invalidation.Id' \
+              --output text \
+              --no-cli-pager)
+          aws cloudfront wait invalidation-completed \
+              --distribution-id "$DISTRIBUTION_ID" \
+              --id "$invalidation_id" \
+              --no-cli-pager

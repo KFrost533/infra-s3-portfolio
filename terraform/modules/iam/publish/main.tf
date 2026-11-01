@@ -46,6 +46,11 @@ data "aws_iam_policy_document" "github_deploy" {
       "${var.bucket_arn}/portfolio/en/*.html"
     ]
   }
+
+  statement {
+    actions   = ["cloudfront:ListDistributions", "cloudfront:ListTagsForResource", "cloudfront:GetDistribution", "cloudfront:CreateInvalidation", "cloudfront:GetInvalidation"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "github_deploy" {

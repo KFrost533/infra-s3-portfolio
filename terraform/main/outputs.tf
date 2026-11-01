@@ -23,7 +23,17 @@ output "cloudfront_url" {
   value       = "https://${module.cloudfront.distribution_domain_name}/"
 }
 
+output "cloudfront_distribution_id" {
+  description = "Distribution ID for the CLOUDFRONT_DISTRIBUTION_ID GitHub Actions variable."
+  value       = module.cloudfront.distribution_id
+}
+
 output "hosted_zone_name_servers" {
   description = "Name servers to delegate the new hosted zone."
   value       = module.route53.hosted_zone_name_servers
+}
+
+output "request_report_topic_arn" {
+  description = "SNS topic ARN for the optional weekly request report."
+  value       = var.enable_request_report ? module.sns[0].topic_arn : null
 }

@@ -1,45 +1,41 @@
 # Portfolio hosting
 
-Publish standalone HTML through private S3 and CloudFront HTTPS.
-
 ```mermaid
 flowchart LR
-    Visitor -->|DNS lookup| Route53
-    Route53 -.->|Resolves domain| CloudFront
+    Visitor -->|DNS| Route53
+    Route53 -.->|Domain| CloudFront
     Visitor -->|HTTPS| CloudFront
-    CloudFront -->|Private origin access| S3
-    ACM -->|TLS certificate| CloudFront
+    ACM -->|Certificate| CloudFront
+    CloudFront -->|Private origin| S3
     GitHub[GitHub Actions] -->|OIDC| IAM
-    IAM -->|Upload permission| S3
-    GitHub -->|Upload HTML| S3
+    IAM -->|Permissions| S3
+    GitHub -->|Upload| S3
+    GitHub -->|Invalidate| CloudFront
+    Scheduler[EventBridge Scheduler] -->|Weekly| Lambda
+    Lambda -->|Requests metric| CloudWatch
+    Lambda -->|Report| SNS
+    SNS -->|Email| Subscriber
 ```
 
-| Service | Purpose |
-|---|---|
-| S3 | Private portfolio storage; Sydney by default |
-| CloudFront | Public HTTPS and the main page |
-| Route 53 | Public hosted zone and DNS records |
-| ACM | DNS-validated certificate in `us-east-1` |
-| IAM | GitHub Actions deployment via OIDC |
+**Review content before publishing:** HTML becomes public. Embed assets or
+host them separately. AWS and domain registration charges apply.
 
-**Review all content before publishing.** Pages are public. Embed assets or
-host them separately; the workflow uploads HTML only. AWS and domain
-registration charges apply.
 
 ## Setup
 
 | Step | Action |
 |---|---|
-| 1 | Publish this project as `KFrost533/infra-s3-portfolio`. Protect `main` and restrict workflow changes and execution. |
-| 2 | Copy `terraform/main/terraform.tfvars.example` to `terraform.tfvars`. Set a globally unique bucket and a domain you control. The portfolio domain must equal the hosted zone or be its subdomain. |
-| 3 | Set `github_oidc_provider_arn` if the account already has a GitHub OIDC provider; otherwise Terraform creates one. Coordinate before creating or deleting this account-wide provider. |
-| 4 | From `terraform/main`, run `terraform init` and `terraform validate`. Register the domain separately; a hosted zone does not register it. |
-| 5 | Review `terraform plan -target=module.route53.aws_route53_zone.portfolio`, then apply that targeted plan only after approval. Use `terraform output hosted_zone_name_servers` to delegate DNS at the registrar or parent zone. Plan migration of existing DNS records first. |
-| 6 | After DNS propagation, review the full `terraform plan`, including any replacements or deletions, before applying. ACM validation can time out before delegation propagates; retain its CNAME for renewal. |
+| 1 | Publish as `KFrost533/infra-s3-portfolio`; protect `main` and restrict workflow access. |
+| 2 | Copy `terraform/main/terraform.tfvars.example` to `terraform.tfvars`. Set a unique bucket and a registered domain you control. The portfolio domain must equal the hosted zone or be its subdomain. |
+| 3 | Set `github_oidc_provider_arn` if the account already has one; otherwise Terraform creates it. Do not delete a shared provider. |
+| 4 | From `terraform/main`, run `terraform init` and `terraform validate`. Review `terraform plan -target=module.route53.aws_route53_zone.portfolio` before applying the targeted plan. |
+| 5 | Delegate the zone using `terraform output hosted_zone_name_servers`; migrate existing DNS records first. Route 53 does not register the domain. |
+| 6 | After DNS propagation, review the full `terraform plan`, including replacements and deletions, before applying. Keep the ACM validation CNAME for renewal. |
 | 7 | Set the GitHub Actions variables below from Terraform outputs. |
 
-Use appropriately authorised AWS credentials for provisioning. Do not commit
-`terraform.tfvars` or state; use a secure backend for shared state.
+Use authorised AWS credentials. Keep variable files and state private; use a
+secure backend for shared state. ACM validation can time out before DNS
+delegation propagates.
 
 | GitHub Actions variable | Terraform output |
 |---|---|
@@ -47,22 +43,49 @@ Use appropriately authorised AWS credentials for provisioning. Do not commit
 | `PORTFOLIO_BUCKET` | `bucket_name` |
 | `AWS_ROLE_ARN` | `deploy_role_arn` |
 
+
+### Terraform logs
+
+From `terraform/main`, use PowerShell 7 to log a command:
+
+```powershell
+..\terraform-log.ps1 plan
+```
+
+Replace `plan` with `init`, `apply`, `destroy` or another Terraform command.
+Logs are in `terraform/log`, which Git ignores. They may contain sensitive
+data; restrict access. Direct Terraform commands are not logged.
+
+
 ## Publishing
 
 | Step | Action |
 |---|---|
-| 1 | Commit reviewed `.html` files under `portfolio/jp` or `portfolio/en` on `main`. Subdirectories are supported; each file must be at most 10 MiB. |
-| 2 | Run **Deploy portfolio HTML to S3** manually. It uploads all committed language files to matching paths and generates language links from `portfolio/main.html`. At least one file is required; an empty language is skipped. |
-| 3 | Open the `portfolio_url` output or `https://your-domain/portfolio/main.html`. Language directory URLs do not automatically resolve `index.html`. |
+| 1 | Commit reviewed `.html` files under `portfolio/jp` or `portfolio/en` on `main`; subdirectories are supported and each file is limited to 10 MiB. |
+| 2 | A portfolio change pushed to `main` deploys automatically; **Deploy portfolio HTML to S3** can also run manually. At least one language file is required. |
+| 3 | Open the `portfolio_url` output or `https://your-domain/portfolio/main.html`. The workflow generates links from committed filenames. |
 
 | Operation | Behaviour |
 |---|---|
-| Update | Re-run the workflow after adding or removing files; links reflect the selected commit. Matching S3 objects are overwritten. |
-| Remove | Removed repository files remain publicly accessible in S3 until deleted separately by an authorised principal. |
-| Failure | Uploads are independent; earlier files may already be updated. The main page uploads last. |
-| Cache | CloudFront caching is disabled and browsers are instructed not to cache HTML. Retry briefly cached errors after upload. |
-| Rollback | An authorised principal can restore an earlier S3 object version. The deployment role cannot list versions or delete files. |
-| Cleanup | Handle stored object versions before deleting the stack. Do not delete a shared OIDC provider. |
+| Cache | The workflow requires exactly one distribution tagged `Project=portfolio` with the configured S3 origin. After upload, it invalidates `/*` and waits. The role has account-wide invalidation access; excess invalidations may incur charges. |
+| Removal | Files removed from Git remain public in S3 until deleted separately. |
+| Failure | Earlier uploads may succeed; the main page uploads last. |
+| Rollback | An authorised principal can restore an S3 version; the deployment role cannot list versions or delete files. |
+| Cleanup | Handle stored object versions before deleting the stack. |
 
-Existing websites are not redirected automatically; update their links after
-reviewing the published pages.
+CloudFront caching is disabled. Language directory URLs do not resolve
+`index.html` automatically; existing websites are not redirected.
+
+## Optional weekly request report
+
+| Item | Details |
+|---|---|
+| Schedule | Monday 09:00 Japan time; previous seven complete Japan-time days. |
+| Data | CloudFront `Requests` from CloudWatch in `us-east-1`; includes bots, errors and assets, not unique visitors. Missing metric data is labelled, not counted as zero. |
+| Enable | Set `enable_request_report = true` and `request_report_email` in an uncommitted `terraform.tfvars`; review the plan before applying. Confirm the SNS subscription email. |
+| Security | The email address is stored in Terraform state despite being marked sensitive. Protect state and logs. Lambda can read CloudWatch metrics and publish only to this SNS topic. |
+| Operations | Lambda logs are retained for 30 days. Scheduler and Lambda retries can result in duplicate emails; inspect CloudWatch logs and Scheduler metrics for failures. No dead-letter queue is configured. |
+| Cost | SNS, Lambda, Scheduler, CloudWatch and log storage may incur charges. |
+
+Terraform packages the Lambda source with the `hashicorp/archive` provider.
+The function uses the AWS SDK included in the Lambda Python runtime.
