@@ -10,7 +10,7 @@ resource "aws_route53_record" "portfolio" {
   for_each = toset(["A", "AAAA"])
 
   zone_id = var.hosted_zone_id
-  name    = var.domain_name
+  name    = var.record_name
   type    = each.value
 
   alias {

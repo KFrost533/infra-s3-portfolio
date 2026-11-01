@@ -25,8 +25,8 @@ host them separately. AWS and domain registration charges apply.
 
 | Step | Action |
 |---|---|
-| 1 | Publish as `KFrost533/infra-s3-portfolio`; protect `main` and restrict workflow access. |
-| 2 | Copy `terraform/main/terraform.tfvars.example` to `terraform.tfvars`. Set a unique bucket, registered domain, and the ID of its existing public Route 53 hosted zone. |
+| 1 | Publish as `KFrost533/infra-s3-portfolio`; protect `main` and restrict workflow access. Keep the GitHub owner and repository IDs in `terraform/main/variables.tf` aligned with this repository. |
+| 2 | Copy `terraform/main/terraform.tfvars.example` to `terraform.tfvars`. Set a unique bucket and registered domain. Set the hosted zone ID in the local `terraform/creds/main.json` configuration. |
 | 3 | Set `github_oidc_provider_arn` if the account already has one; otherwise Terraform creates it. Do not delete a shared provider. |
 | 4 | From `terraform/main`, run `terraform init` and `terraform validate`. Terraform adds records to the supplied hosted zone; it does not create or delete hosted zones. |
 | 5 | Ensure the domain registration delegates to that hosted zone. Route 53 does not register the domain when only a hosted zone is created. |

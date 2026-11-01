@@ -33,6 +33,11 @@ output "hosted_zone_id" {
   value       = module.route53.hosted_zone_id
 }
 
+output "record_name" {
+  description = "The name of the DNS record for the portfolio domain."
+  value       = var.record_name
+}
+
 output "request_report_topic_arn" {
   description = "SNS topic ARN for the optional weekly request report."
   value       = var.enable_request_report ? module.sns[0].topic_arn : null

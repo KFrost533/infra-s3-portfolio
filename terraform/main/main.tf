@@ -36,6 +36,10 @@ provider "aws" {
   }
 }
 
+locals {
+  hosted_zone_id = jsondecode(file("${path.root}/../creds/main.json")).hosted_zone_id
+}
+
 module "s3" {
   source = "../modules/s3"
 
@@ -72,8 +76,9 @@ module "cloudfront" {
 module "route53" {
   source = "../modules/route53"
 
-  hosted_zone_id            = var.hosted_zone_id
+  hosted_zone_id            = local.hosted_zone_id
   domain_name               = var.domain_name
+  record_name               = var.record_name
   certificate_validation    = module.acm.validation_record
   cloudfront_domain_name    = module.cloudfront.distribution_domain_name
   cloudfront_hosted_zone_id = module.cloudfront.distribution_hosted_zone_id
@@ -87,6 +92,8 @@ module "iam_publish" {
   deploy_role_name            = var.deploy_role_name
   github_oidc_provider_arn    = var.github_oidc_provider_arn
   github_repository           = var.github_repository
+  github_repository_owner_id  = var.github_repository_owner_id
+  github_repository_id        = var.github_repository_id
 }
 
 module "iam_report" {
@@ -123,52 +130,4 @@ module "evbs" {
 
   function_arn = module.lambda[0].function_arn
   role_arn     = module.iam_report[0].report_scheduler_role_arn
-}
-
-moved {
-  from = module.iam.aws_iam_openid_connect_provider.github
-  to   = module.iam_publish.aws_iam_openid_connect_provider.github
-}
-
-moved {
-  from = module.iam.aws_iam_role.github_deploy
-  to   = module.iam_publish.aws_iam_role.github_deploy
-}
-
-moved {
-  from = module.iam.aws_iam_role_policy.github_deploy
-  to   = module.iam_publish.aws_iam_role_policy.github_deploy
-}
-
-moved {
-  from = module.iam.aws_iam_role.report_lambda
-  to   = module.iam_report[0].aws_iam_role.report_lambda
-}
-
-moved {
-  from = module.iam.aws_iam_role_policy.report_lambda
-  to   = module.iam_report[0].aws_iam_role_policy.report_lambda
-}
-
-moved {
-  from = module.iam.aws_iam_role.report_scheduler
-  to   = module.iam_report[0].aws_iam_role.report_scheduler
-}
-
-moved {
-  from = module.iam.aws_iam_role_policy.report_scheduler
-  to   = module.iam_report[0].aws_iam_role_policy.report_scheduler
-}
-
-moved {
-  from = module.lambda[0].aws_cloudwatch_log_group.report
-  to   = module.cloudwatch[0].aws_cloudwatch_log_group.report
-}
-
-removed {
-  from = module.route53.aws_route53_zone.portfolio
-
-  lifecycle {
-    destroy = false
-  }
 }

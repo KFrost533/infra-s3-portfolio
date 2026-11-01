@@ -16,15 +16,10 @@ variable "domain_name" {
   default     = "kfrost533.click"
 }
 
-variable "hosted_zone_id" {
-  description = "ID of the existing public Route 53 hosted zone for the portfolio domain."
+variable "record_name" {
+  description = "The name of the DNS record for the portfolio domain."
   type        = string
-  default     = jsondecode(file("${path.root}/terraform/creds/main.json")).hosted_zone_id
-
-  validation {
-    condition     = can(regex("^Z[A-Z0-9]+$", var.hosted_zone_id))
-    error_message = "The hosted zone ID must be a Route 53 zone ID beginning with Z."
-  }
+  default     = "portfolio"
 }
 
 variable "github_repository" {
@@ -38,10 +33,32 @@ variable "github_repository" {
   }
 }
 
-variable "github_oidc_provider_arn" {
-  description = "Existing GitHub OIDC provider ARN, or null to create one."
+variable "github_repository_owner_id" {
+  description = "Immutable GitHub owner ID used in the OIDC subject claim."
   type        = string
-  default     = null
+  default     = "155362696"
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_owner_id))
+    error_message = "The GitHub owner ID must contain only digits."
+  }
+}
+
+variable "github_repository_id" {
+  description = "Immutable GitHub repository ID used in the OIDC subject claim."
+  type        = string
+  default     = "1441557129"
+
+  validation {
+    condition     = can(regex("^[0-9]+$", var.github_repository_id))
+    error_message = "The GitHub repository ID must contain only digits."
+  }
+}
+
+variable "github_oidc_provider_arn" {
+  description = "Existing GitHub OIDC provider ARN; set to null only when Terraform should create one."
+  type        = string
+  default     = "arn:aws:iam::204806963442:oidc-provider/token.actions.githubusercontent.com"
 
   validation {
     condition     = var.github_oidc_provider_arn == null ? true : can(regex("^arn:[^:]+:iam::[0-9]{12}:oidc-provider/token[.]actions[.]githubusercontent[.]com$", var.github_oidc_provider_arn))

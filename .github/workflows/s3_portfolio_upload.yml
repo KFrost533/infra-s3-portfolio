@@ -101,8 +101,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}          
 
       - name: Find the portfolio CloudFront distribution
         id: distribution
@@ -135,12 +135,12 @@ jobs:
               if any(tag["Key"] == "Project" and tag["Value"] == "portfolio" for tag in tags["Tags"].get("Items", [])):
                   matches.append(distribution)
 
-              if len(matches) != 1:
-                sys.exit(f"Expected exactly one CloudFront distribution tagged Project=portfolio; found {len(matches)}.")
-              distribution_id = matches[0]["Id"]
+          if len(matches) != 1:
+              sys.exit(f"Expected exactly one CloudFront distribution tagged Project=portfolio; found {len(matches)}.")
+          distribution_id = matches[0]["Id"]
 
           if not re.fullmatch(r"[A-Z0-9]{1,32}", distribution_id):
-            sys.exit("The discovered CloudFront distribution ID is invalid.")
+              sys.exit("The discovered CloudFront distribution ID is invalid.")
 
           distribution = aws_json("get-distribution", "--id", distribution_id)["Distribution"]
           expected_origin = f'{os.environ["PORTFOLIO_BUCKET"]}.s3.{os.environ["AWS_REGION"]}.amazonaws.com'
@@ -149,10 +149,10 @@ jobs:
           if not any(origin["DomainName"] == expected_origin for origin in origins):
               sys.exit("The matched CloudFront distribution does not use the configured portfolio bucket as an origin.")
 
-            with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"distribution_id={distribution_id}\n")
 
-              print("Found one authorised portfolio distribution with the configured S3 origin.")
+          print("Found one authorised portfolio distribution with the configured S3 origin.")
 
           PY
 
