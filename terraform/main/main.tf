@@ -78,7 +78,6 @@ module "route53" {
 
   hosted_zone_id            = local.hosted_zone_id
   domain_name               = var.domain_name
-  record_name               = var.record_name
   certificate_validation    = module.acm.validation_record
   cloudfront_domain_name    = module.cloudfront.distribution_domain_name
   cloudfront_hosted_zone_id = module.cloudfront.distribution_hosted_zone_id

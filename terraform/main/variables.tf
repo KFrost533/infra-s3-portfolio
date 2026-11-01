@@ -13,13 +13,7 @@ variable "bucket_name" {
 variable "domain_name" {
   description = "Public domain name for the portfolio, such as portfolio.example.com."
   type        = string
-  default     = "kfrost533.click"
-}
-
-variable "record_name" {
-  description = "The name of the DNS record for the portfolio domain."
-  type        = string
-  default     = "portfolio"
+  default     = "portfolio.kfrost533.click"
 }
 
 variable "github_repository" {

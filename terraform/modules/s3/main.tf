@@ -18,6 +18,7 @@ resource "aws_s3_bucket_versioning" "portfolio" {
     status = "Enabled"
   }
 }
+
 data "aws_iam_policy_document" "bucket" {
   statement {
     sid     = "AllowCloudFrontRead"

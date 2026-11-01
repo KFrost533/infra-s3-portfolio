@@ -13,11 +13,6 @@ variable "domain_name" {
   type        = string
 }
 
-variable "record_name" {
-  description = "The name of the DNS record for the portfolio domain."
-  type        = string
-}
-
 variable "certificate_validation" {
   description = "DNS record details supplied by ACM."
   type = object({
