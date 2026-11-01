@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.5.7"
+  required_version = ">= 1.7.0"
 
   required_providers {
     aws = {
@@ -55,7 +55,8 @@ module "acm" {
 }
 
 module "cloudwatch" {
-  source = "../modules/cloudwatch"
+  count         = var.enable_request_report ? 1 : 0
+  source        = "../modules/cloudwatch"
   function_name = "portfolio-weekly-requests"
 }
 
@@ -71,7 +72,7 @@ module "cloudfront" {
 module "route53" {
   source = "../modules/route53"
 
-  hosted_zone_name          = var.hosted_zone_name
+  hosted_zone_id            = var.hosted_zone_id
   domain_name               = var.domain_name
   certificate_validation    = module.acm.validation_record
   cloudfront_domain_name    = module.cloudfront.distribution_domain_name
@@ -86,14 +87,16 @@ module "iam_publish" {
   deploy_role_name            = var.deploy_role_name
   github_oidc_provider_arn    = var.github_oidc_provider_arn
   github_repository           = var.github_repository
-  enable_request_report       = var.enable_request_report
-  report_topic_arn            = var.enable_request_report ? module.sns[0].topic_arn : null
-  report_function_name        = "portfolio-weekly-requests"
-  aws_region                  = var.aws_region
 }
 
-module "iam_detect" {
-  source = "../modules/iam/detect"
+module "iam_report" {
+  count  = var.enable_request_report ? 1 : 0
+  source = "../modules/iam/report"
+
+  enable_request_report = var.enable_request_report
+  report_topic_arn      = module.sns[0].topic_arn
+  report_function_name  = "portfolio-weekly-requests"
+  aws_region            = var.aws_region
 }
 
 module "sns" {
@@ -108,9 +111,10 @@ module "lambda" {
   source = "../modules/lambda"
 
   function_name   = "portfolio-weekly-requests"
-  role_arn        = module.iam_publish.report_lambda_role_arn
+  role_arn        = module.iam_report[0].report_lambda_role_arn
   topic_arn       = module.sns[0].topic_arn
   distribution_id = module.cloudfront.distribution_id
+  depends_on      = [module.cloudwatch]
 }
 
 module "evbs" {
@@ -118,5 +122,53 @@ module "evbs" {
   source = "../modules/evbs"
 
   function_arn = module.lambda[0].function_arn
-  role_arn     = module.iam_publish.report_scheduler_role_arn
+  role_arn     = module.iam_report[0].report_scheduler_role_arn
+}
+
+moved {
+  from = module.iam.aws_iam_openid_connect_provider.github
+  to   = module.iam_publish.aws_iam_openid_connect_provider.github
+}
+
+moved {
+  from = module.iam.aws_iam_role.github_deploy
+  to   = module.iam_publish.aws_iam_role.github_deploy
+}
+
+moved {
+  from = module.iam.aws_iam_role_policy.github_deploy
+  to   = module.iam_publish.aws_iam_role_policy.github_deploy
+}
+
+moved {
+  from = module.iam.aws_iam_role.report_lambda
+  to   = module.iam_report[0].aws_iam_role.report_lambda
+}
+
+moved {
+  from = module.iam.aws_iam_role_policy.report_lambda
+  to   = module.iam_report[0].aws_iam_role_policy.report_lambda
+}
+
+moved {
+  from = module.iam.aws_iam_role.report_scheduler
+  to   = module.iam_report[0].aws_iam_role.report_scheduler
+}
+
+moved {
+  from = module.iam.aws_iam_role_policy.report_scheduler
+  to   = module.iam_report[0].aws_iam_role_policy.report_scheduler
+}
+
+moved {
+  from = module.lambda[0].aws_cloudwatch_log_group.report
+  to   = module.cloudwatch[0].aws_cloudwatch_log_group.report
+}
+
+removed {
+  from = module.route53.aws_route53_zone.portfolio
+
+  lifecycle {
+    destroy = false
+  }
 }

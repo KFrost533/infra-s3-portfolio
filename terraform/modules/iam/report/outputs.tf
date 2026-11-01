@@ -1,8 +1,3 @@
-output "deploy_role_arn" {
-  description = "GitHub Actions deployment role ARN."
-  value       = aws_iam_role.github_deploy.arn
-}
-
 output "report_lambda_role_arn" {
   description = "Execution role ARN for the optional request report Lambda."
   value       = var.enable_request_report ? aws_iam_role.report_lambda[0].arn : null

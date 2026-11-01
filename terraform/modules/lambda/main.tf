@@ -8,7 +8,7 @@ terraform {
 
 data "archive_file" "report" {
   type        = "zip"
-  source_file = "${path.module}/report.py"
+  source_file = "${path.module}/code/report.py"
   output_path = "${path.root}/.terraform/portfolio-weekly-requests.zip"
 }
 
@@ -27,6 +27,4 @@ resource "aws_lambda_function" "report" {
       TOPIC_ARN       = var.topic_arn
     }
   }
-
-  depends_on = [aws_cloudwatch_log_group.report]
 }

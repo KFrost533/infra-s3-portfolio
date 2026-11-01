@@ -13,13 +13,18 @@ variable "bucket_name" {
 variable "domain_name" {
   description = "Public domain name for the portfolio, such as portfolio.example.com."
   type        = string
-  default     = "kfrost533-portfolio.com"
+  default     = "kfrost533.click"
 }
 
-variable "hosted_zone_name" {
-  description = "DNS domain of the new public Route 53 hosted zone, not a descriptive label."
+variable "hosted_zone_id" {
+  description = "ID of the existing public Route 53 hosted zone for the portfolio domain."
   type        = string
-  default     = "kfrost533-portfolio.com"
+  default     = jsondecode(file("${path.root}/terraform/creds/main.json")).hosted_zone_id
+
+  validation {
+    condition     = can(regex("^Z[A-Z0-9]+$", var.hosted_zone_id))
+    error_message = "The hosted zone ID must be a Route 53 zone ID beginning with Z."
+  }
 }
 
 variable "github_repository" {

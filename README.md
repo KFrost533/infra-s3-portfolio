@@ -26,11 +26,11 @@ host them separately. AWS and domain registration charges apply.
 | Step | Action |
 |---|---|
 | 1 | Publish as `KFrost533/infra-s3-portfolio`; protect `main` and restrict workflow access. |
-| 2 | Copy `terraform/main/terraform.tfvars.example` to `terraform.tfvars`. Set a unique bucket and a registered domain you control. The portfolio domain must equal the hosted zone or be its subdomain. |
+| 2 | Copy `terraform/main/terraform.tfvars.example` to `terraform.tfvars`. Set a unique bucket, registered domain, and the ID of its existing public Route 53 hosted zone. |
 | 3 | Set `github_oidc_provider_arn` if the account already has one; otherwise Terraform creates it. Do not delete a shared provider. |
-| 4 | From `terraform/main`, run `terraform init` and `terraform validate`. Review `terraform plan -target=module.route53.aws_route53_zone.portfolio` before applying the targeted plan. |
-| 5 | Delegate the zone using `terraform output hosted_zone_name_servers`; migrate existing DNS records first. Route 53 does not register the domain. |
-| 6 | After DNS propagation, review the full `terraform plan`, including replacements and deletions, before applying. Keep the ACM validation CNAME for renewal. |
+| 4 | From `terraform/main`, run `terraform init` and `terraform validate`. Terraform adds records to the supplied hosted zone; it does not create or delete hosted zones. |
+| 5 | Ensure the domain registration delegates to that hosted zone. Route 53 does not register the domain when only a hosted zone is created. |
+| 6 | Review the full `terraform plan`, including record replacements, before applying. The former Terraform-managed zone is removed from state without being deleted; remove any unused zone manually only after confirming it is no longer needed. Keep the ACM validation CNAME for renewal. |
 | 7 | Set the GitHub Actions variables below from Terraform outputs. |
 
 Use authorised AWS credentials. Keep variable files and state private; use a

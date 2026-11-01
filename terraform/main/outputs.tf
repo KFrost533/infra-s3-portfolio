@@ -10,7 +10,7 @@ output "aws_region" {
 
 output "deploy_role_arn" {
   description = "Role ARN for the AWS_ROLE_ARN GitHub Actions variable."
-  value       = module.iam.deploy_role_arn
+  value       = module.iam_publish.deploy_role_arn
 }
 
 output "portfolio_url" {
@@ -28,9 +28,9 @@ output "cloudfront_distribution_id" {
   value       = module.cloudfront.distribution_id
 }
 
-output "hosted_zone_name_servers" {
-  description = "Name servers to delegate the new hosted zone."
-  value       = module.route53.hosted_zone_name_servers
+output "hosted_zone_id" {
+  description = "Existing Route 53 hosted zone receiving the portfolio DNS records."
+  value       = module.route53.hosted_zone_id
 }
 
 output "request_report_topic_arn" {

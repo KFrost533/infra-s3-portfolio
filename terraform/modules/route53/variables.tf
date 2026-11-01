@@ -1,5 +1,5 @@
-variable "hosted_zone_name" {
-  description = "Domain name of the new public Route 53 hosted zone."
+variable "hosted_zone_id" {
+  description = "ID of the existing public Route 53 hosted zone."
   type        = string
 }
 

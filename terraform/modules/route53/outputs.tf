@@ -3,7 +3,7 @@ output "validation_record_fqdn" {
   value       = aws_route53_record.certificate_validation.fqdn
 }
 
-output "hosted_zone_name_servers" {
-  description = "Name servers to delegate the new hosted zone."
-  value       = aws_route53_zone.portfolio.name_servers
+output "hosted_zone_id" {
+  description = "ID of the existing public hosted zone receiving portfolio records."
+  value       = var.hosted_zone_id
 }
