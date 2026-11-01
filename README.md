@@ -61,14 +61,15 @@ data; restrict access. Direct Terraform commands are not logged.
 
 | Step | Action |
 |---|---|
-| 1 | Commit reviewed `.html` files under `portfolio/jp` or `portfolio/en` on `main`; subdirectories are supported and each file is limited to 10 MiB. |
-| 2 | A portfolio change pushed to `main` deploys automatically; **Deploy portfolio HTML to S3** can also run manually. At least one language file is required. |
-| 3 | Open the `portfolio_url` output or `https://your-domain/portfolio/main.html`. The workflow generates links from committed filenames. |
+| 1 | Edit and commit the career, skills, and projects pages under `portfolio/jp` and `portfolio/en` on `main`. Each HTML file is limited to 10 MiB. |
+| 2 | The build applies `portfolio/assets/portfolio.css` and rejects unsupported template syntax. It also supports HTML fragments and career experience includes when the corresponding text files are provided. |
+| 3 | A portfolio change pushed to `main` deploys automatically; **Deploy portfolio HTML to S3** can also run manually. The workflow uploads generated HTML, the shared stylesheet, and a link index. |
+| 4 | Open the `portfolio_url` output or `https://your-domain/portfolio/main.html`. The index links to the three pages in each language; each page links to the other sections and its translated counterpart. |
 
 | Operation | Behaviour |
 |---|---|
 | Cache | The workflow requires exactly one distribution tagged `Project=portfolio` with the configured S3 origin. After upload, it invalidates `/*` and waits. The role has account-wide invalidation access; excess invalidations may incur charges. |
-| Removal | Files removed from Git remain public in S3 until deleted separately. |
+| Removal | Superseded pages removed from Git remain accessible in S3 until deleted separately; the deployment does not delete them. |
 | Failure | Earlier uploads may succeed; the main page uploads last. |
 | Rollback | An authorised principal can restore an S3 version; the deployment role cannot list versions or delete files. |
 | Cleanup | Handle stored object versions before deleting the stack. |

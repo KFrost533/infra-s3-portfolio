@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "portfolio/**"
+      - "scripts/build_portfolio.py"
+      - ".github/workflows/s3_portfolio_upload.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,78 +27,21 @@ jobs:
       - name: Check out the selected commit
         uses: actions/checkout@v4
 
-      - name: Find and validate portfolio HTML files
+      - name: Build standalone portfolio pages
         env:
           AWS_REGION: ${{ vars.AWS_REGION }}
           AWS_ROLE_ARN: ${{ vars.AWS_ROLE_ARN }}
           PORTFOLIO_BUCKET: ${{ vars.PORTFOLIO_BUCKET }}
-          MANIFEST_PATH: ${{ runner.temp }}/portfolio-html-paths
-          MAIN_PAGE_PATH: ${{ runner.temp }}/portfolio-main.html
+          SITE_DIRECTORY: ${{ runner.temp }}/portfolio-site
+          MANIFEST_PATH: ${{ runner.temp }}/portfolio-site-manifest
         run: |
-          python3 - <<'PY'
-          import os
-          import html
-          import pathlib
-          import subprocess
-          import sys
-          from urllib.parse import quote
-
-          required = ("AWS_REGION", "AWS_ROLE_ARN", "PORTFOLIO_BUCKET")
-          if not all(os.environ[name].strip() for name in required):
-              sys.exit("Configure the AWS_REGION, AWS_ROLE_ARN and PORTFOLIO_BUCKET repository variables.")
-          workspace = pathlib.Path(os.environ["GITHUB_WORKSPACE"]).resolve()
-          
-          tracked = subprocess.run(
-              ["git", "ls-files", "-z", "--", "portfolio/jp", "portfolio/en"],
-              cwd=workspace,
-              stdout=subprocess.PIPE,
-              check=True,
-          ).stdout.split(b"\0")
-          files = [os.fsdecode(path) for path in tracked if path.endswith(b".html")]
-
-          if not files:
-              sys.exit("Commit at least one HTML file under portfolio/jp or portfolio/en.")
-          counts = {"jp": 0, "en": 0}
-
-          for name in files:
-              relative = pathlib.Path(name)
-              if len(relative.parts) < 3 or relative.parts[0] != "portfolio" or relative.parts[1] not in counts:
-                  sys.exit("A selected file is outside the portfolio language directories.")
-              language = relative.parts[1]
-              base = (workspace / "portfolio" / language).resolve()
-              source = workspace / relative
-              selected = source.resolve()
-              if not base.is_relative_to(workspace) or not selected.is_relative_to(base) or source.is_symlink() or not selected.is_file():
-                  sys.exit("Each HTML file must be a regular file inside its portfolio language directory.")
-              if selected.stat().st_size > 10 * 1024 * 1024:
-                  sys.exit("Portfolio HTML files must not exceed 10 MiB each.")
-              counts[language] += 1
-
-          for language, count in counts.items():
-              if not count:
-                  print(f"No committed HTML files found for {language}; no files will be uploaded for that language.")
-          template_path = workspace / "portfolio" / "main.html"
-
-          if template_path.is_symlink() or not template_path.is_file():
-              sys.exit("The portfolio main page template is missing or is not a regular file.")
-          template = template_path.read_text(encoding="utf-8")
-
-          for language in ("jp", "en"):
-              marker = f"<!-- PORTFOLIO_{language.upper()}_LINKS -->"
-              if template.count(marker) != 1:
-                  sys.exit(f"The main page must contain exactly one {marker} marker.")
-              names = sorted(name for name in files if pathlib.PurePosixPath(name).parts[1] == language)
-              links = [
-                  f'<li><a href="/{html.escape(quote(name, safe="/"), quote=True)}">'
-                  f'{html.escape("/".join(pathlib.PurePosixPath(name).parts[2:]))}</a></li>'
-                  for name in names
-              ]
-              content = "<ul>\n" + "\n".join(links) + "\n</ul>" if links else "<p>No portfolio pages available.</p>"
-              template = template.replace(marker, content)
-          pathlib.Path(os.environ["MAIN_PAGE_PATH"]).write_text(template, encoding="utf-8")
-          pathlib.Path(os.environ["MANIFEST_PATH"]).write_bytes(b"".join(os.fsencode(name) + b"\0" for name in files))
-          print(f"Validated {len(files)} HTML file(s).")
-          PY
+          if [[ -z "$AWS_REGION" || -z "$AWS_ROLE_ARN" || -z "$PORTFOLIO_BUCKET" ]]; then
+            echo "Configure the AWS_REGION, AWS_ROLE_ARN and PORTFOLIO_BUCKET repository variables." >&2
+            exit 1
+          fi
+          python3 scripts/build_portfolio.py \
+            --output "$SITE_DIRECTORY" \
+            --manifest "$MANIFEST_PATH"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -159,25 +104,23 @@ jobs:
       - name: Upload portfolio HTML to S3
         env:
           BUCKET: ${{ vars.PORTFOLIO_BUCKET }}
-          MANIFEST_PATH: ${{ runner.temp }}/portfolio-html-paths
-          MAIN_PAGE_PATH: ${{ runner.temp }}/portfolio-main.html
+          SITE_DIRECTORY: ${{ runner.temp }}/portfolio-site
+          MANIFEST_PATH: ${{ runner.temp }}/portfolio-site-manifest
         run: |
-          while IFS= read -r -d '' file; do
+          while IFS= read -r -d '' relative_path; do
+            case "$relative_path" in
+              *.html) content_type="text/html; charset=utf-8" ;;
+              *.css) content_type="text/css; charset=utf-8" ;;
+              *) echo "Unsupported generated portfolio file: $relative_path" >&2; exit 1 ;;
+            esac
             aws s3api put-object \
               --bucket "$BUCKET" \
-              --key "$file" \
-              --body "$file" \
-              --content-type "text/html; charset=utf-8" \
+              --key "portfolio/$relative_path" \
+              --body "$SITE_DIRECTORY/$relative_path" \
+              --content-type "$content_type" \
               --cache-control "no-cache, no-store, must-revalidate" \
               --no-cli-pager
           done < "$MANIFEST_PATH"
-          aws s3api put-object \
-            --bucket "$BUCKET" \
-            --key "portfolio/main.html" \
-            --body "$MAIN_PAGE_PATH" \
-            --content-type "text/html; charset=utf-8" \
-            --cache-control "no-cache, no-store, must-revalidate" \
-            --no-cli-pager
 
       - name: Invalidate CloudFront cache
         env:

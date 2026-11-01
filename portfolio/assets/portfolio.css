@@ -1,0 +1,300 @@
+:root {
+  color-scheme: light;
+  --page-background: #f3f6fb;
+  --surface: #ffffff;
+  --text: #172033;
+  --muted: #526174;
+  --border: #d7e0ec;
+  --accent: #174ea6;
+  --career-table-header: #e5f0fc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: var(--page-background);
+  color: var(--text);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+main {
+  width: min(100%, 76rem);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  box-shadow: 0 8px 28px #17203312;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text);
+  line-height: 1.25;
+}
+
+h1 {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+}
+
+h2 {
+  margin-top: 1.5rem;
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+}
+
+p,
+li {
+  color: var(--muted);
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.15em;
+}
+
+a:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+table {
+  display: block;
+  width: 100%;
+  margin: 1rem 0;
+  overflow-x: auto;
+  border-collapse: collapse;
+  background: var(--surface);
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--career-table-header);
+}
+
+tbody tr:nth-child(even) td {
+  background: #f8fafd;
+}
+
+img,
+svg,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.languages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+}
+
+section {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+@media (max-width: 40rem) {
+  body {
+    padding: 0.5rem;
+  }
+
+  main {
+    padding: 1rem;
+    border-radius: 0.5rem;
+  }
+}
+
+:root {
+  --career-table-header: #d9ecff;
+}
+
+table thead th,
+table tr:first-child th,
+table th {
+  background-color: var(--career-table-header) !important;
+  border-color: #c4dbf3;
+}
+
+table tr:nth-child(even) td {
+  background-color: #fafcff;
+}
+
+table td,
+table th {
+  vertical-align: top;
+}
+
+.career-nav-group {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+
+.career-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
+  background: #f8fbff;
+  font-size: 14px;
+}
+
+.career-lang-nav {
+  justify-content: flex-start;
+}
+
+.career-section-nav {
+  background: #fcfeff;
+}
+
+.career-lang-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 7px 12px;
+  border: 1px solid #c9d8e8;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #26435f;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.career-lang-link.is-active {
+  background: #dbeeff;
+  border-color: #9ec4e8;
+  color: #15324c;
+}
+
+.career-intro {
+  margin: 8px 0 14px;
+  color: #425466;
+  line-height: 1.7;
+}
+
+.career-note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 4px solid #8aa5c3;
+  background: #f8fbff;
+}
+
+.skills-note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 4px solid #8aa5c3;
+  background: #f8fbff;
+}
+
+.career-summary-box {
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
+  background: #fdfefe;
+}
+
+.career-chart {
+  margin: 12px 0 18px;
+  padding: 12px;
+  border: 1px solid #d5dde8;
+  border-radius: 10px;
+  background: #fcfeff;
+}
+
+.career-chart-row {
+  margin-bottom: 10px;
+}
+
+.career-chart-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.career-chart-name {
+  font-weight: 600;
+}
+
+.career-chart-value {
+  color: #34495e;
+}
+
+.career-chart-track {
+  width: 100%;
+  height: 14px;
+  background: #e8f1fb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.career-chart-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6ea8df, #4f87c7);
+}
+
+.career-chart-caption {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #5d6d7e;
+}
+
+.career-glance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 12px 0 20px;
+}
+
+.career-glance-card {
+  padding: 14px 16px;
+  border: 1px solid #d5dde8;
+  border-radius: 14px;
+  background: #fcfeff;
+}
+
+.career-glance-label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5d6d7e;
+}
+
+.career-glance-value {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f3448;
+  line-height: 1.5;
+}
+
+.career-nav {
+  font-size: 13px;
+}
