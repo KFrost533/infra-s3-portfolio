@@ -11,6 +11,7 @@ resource "aws_cloudfront_distribution" "portfolio" {
   is_ipv6_enabled     = true
   default_root_object = "portfolio/main.html"
   aliases             = [var.domain_name]
+  web_acl_id          = var.web_acl_arn
 
   origin {
     domain_name              = var.bucket_regional_domain

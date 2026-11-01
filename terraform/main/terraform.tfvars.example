@@ -7,6 +7,9 @@ github_repository_id       = "1441557129"
 # If the account already has the GitHub Actions OIDC provider, set its ARN.
 # github_oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
 
+# Optional AWS WAF Web ACL in count mode. Enabling it incurs AWS WAF charges.
+# enable_waf = true
+
 # Optional weekly CloudFront request report. The recipient must confirm the SNS subscription.
 # enable_request_report = true
 # request_report_email  = "recipient@example.com"

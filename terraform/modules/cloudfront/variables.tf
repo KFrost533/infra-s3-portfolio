@@ -17,3 +17,8 @@ variable "domain_name" {
   description = "Public domain name for the portfolio."
   type        = string
 }
+
+variable "web_acl_arn" {
+  description = "Optional CloudFront-scoped AWS WAF web ACL ARN."
+  type        = string
+}

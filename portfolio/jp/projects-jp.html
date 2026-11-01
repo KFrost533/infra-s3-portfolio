@@ -101,8 +101,8 @@
   <tr>
     <td data-label="期間" align="left"><strong>2026年-2027年<br/>(短期目標)</strong></td>
     <td data-label="主要目標" align="left"><strong>フルスタック<br/>開発スキル向上</strong></td>
-    <td data-label="具体的な取り組み"><ul class="roadmap-initiatives"><li>React + Spring BootでWebアプリ開発</li><li>TypeScript導入で型安全開発</li><li>DB設計・API設計の体系学習</li><li>Docker・Kubernetesコンテナ運用学習</li><li>OSS運用向けに海外チームとの英語コミュニケーション強化</li></ul></td>
-    <td data-label="成果指標" class="roadmap-metrics" align="left">ポートフォリオ<br/>完成・公開<br/><br/>技術資格取得</td>
+    <td data-label="具体的な取り組み"><ul class="roadmap-initiatives"><li>React・TypeScriptとSpring BootでWebアプリを開発</li><li>PostgreSQLを用いたDB設計とAPI設計</li><li>自動テスト・CI/CD・AWSへのデプロイと運用</li><li>OSS運用向けに海外チームとの英語コミュニケーション強化</li></ul></td>
+    <td data-label="成果指標" class="roadmap-metrics" align="left">テストと自動デプロイを備えた<br/>アプリの公開<br/><br/>設計・運用手順の文書化</td>
   </tr>
 
   <tr>
@@ -113,6 +113,7 @@
   </tr>
 </table></section>
 <section><h2>学習計画</h2>
+<p>既存のAWS・Terraformの経験を活かし、一つのアプリを開発から運用まで完成させることを優先します。</p>
 <table>
 <thead>
 <tr>
@@ -124,67 +125,53 @@
 </tr>
 </thead>
 <tbody><tr>
-<td>最優先 (2026年内)</td>
-<td>CI/CD・自動化</td>
-<td>GitHub Actions</td>
-<td>2026年通年</td>
-<td>自動化パイプライン・継続的デリバリー</td>
+<td>最優先</td>
+<td>Web開発の基礎</td>
+<td>React、TypeScript、HTTP、API設計</td>
+<td>2026年末〜2027年初め</td>
+<td>APIを利用するフロントエンドの開発</td>
 </tr>
 <tr>
-<td>最優先 (2026年内)</td>
-<td>フロントエンド</td>
-<td>React (中級)</td>
-<td>2026年通年</td>
-<td>モダンSPA開発・フレームワーク比較学習</td>
+<td>最優先</td>
+<td>バックエンド・データベース</td>
+<td>Spring Boot、PostgreSQL</td>
+<td>2027年初め</td>
+<td>CRUD、入力検証、認証、DB設計・マイグレーション</td>
 </tr>
 <tr>
-<td>最優先 (2026年内)</td>
-<td>データベース</td>
-<td>MongoDB, PostgreSQL, Redis</td>
-<td>2026年通年</td>
-<td>NoSQL・リレーショナルDB・キャッシュ</td>
-</tr>
-<tr>
-<td>最優先 (2026年内)</td>
-<td>コンテナ・オーケストレーション</td>
-<td>Docker, Kubernetes, Docker Compose</td>
-<td>2026年通年</td>
-<td>コンテナ化・オーケストレーション・DevOps</td>
-</tr>
-<tr>
-<td>最優先 (2026年)</td>
-<td>IaC・監視</td>
-<td>Terraform, Ansible, Prometheus</td>
-<td>2026年通年</td>
-<td>インフラコード化・運用監視自動化</td>
-</tr>
-<tr>
-<td>最優先 (2026年内)</td>
-<td>プログラミング言語</td>
-<td>TypeScript</td>
-<td>2026年後半</td>
-<td>型安全大規模開発</td>
-</tr>
-<tr>
-<td>最優先 (2026年内)</td>
-<td>プログラミング言語</td>
-<td>Go</td>
-<td>2026年後半</td>
-<td>型安全大規模開発</td>
-</tr>
-<tr>
-<td>最優先 (2027年内)</td>
-<td>クラウド拡張</td>
-<td>Azure (基礎), GCP (基礎)</td>
+<td>重要</td>
+<td>テスト・CI/CD</td>
+<td>JUnit、フロントエンドのテスト、GitHub Actions</td>
 <td>2027年前半</td>
-<td>マルチクラウド対応・選択肢拡大</td>
+<td>変更時の自動テストと継続的デリバリー</td>
 </tr>
 <tr>
-<td>重要 (2027年)</td>
+<td>重要</td>
+<td>デプロイ・運用</td>
+<td>Docker、Terraform、AWS、監視</td>
+<td>2027年後半</td>
+<td>アプリの公開、最小権限の設定、復旧手順の文書化</td>
+</tr>
+<tr>
+<td>必要に応じて</td>
+<td>データ・言語</td>
+<td>MongoDB、Redis、Go</td>
+<td>プロジェクトに必要な場合</td>
+<td>NoSQL、キャッシュ、追加言語の検討</td>
+</tr>
+<tr>
+<td>必要に応じて</td>
+<td>運用・クラウド</td>
+<td>Kubernetes、Docker Compose、Ansible、Prometheus、Azure、GCP</td>
+<td>プロジェクトに必要な場合</td>
+<td>コンテナ運用、監視、マルチクラウドの検討</td>
+</tr>
+<tr>
+<td>必要に応じて</td>
 <td>テスト技術</td>
 <td>Jest, JUnit, Selenium, Cypress</td>
-<td>2027年前半</td>
-<td>単体・統合・E2Eテスト・品質保証</td>
+<td>プロジェクトに必要な場合</td>
+<td>単体・統合・E2Eテストの選択肢を拡張</td>
 </tr>
 <tr>
 <td>長期検討 (2028年-)</td>

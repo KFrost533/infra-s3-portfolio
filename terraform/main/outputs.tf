@@ -28,6 +28,11 @@ output "cloudfront_distribution_id" {
   value       = module.cloudfront.distribution_id
 }
 
+output "waf_web_acl_arn" {
+  description = "ARN of the optional CloudFront WAF web ACL."
+  value       = var.enable_waf ? module.waf[0].web_acl_arn : null
+}
+
 output "hosted_zone_id" {
   description = "Existing Route 53 hosted zone receiving the portfolio DNS records."
   value       = module.route53.hosted_zone_id

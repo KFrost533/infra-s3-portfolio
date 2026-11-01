@@ -5,6 +5,7 @@ flowchart LR
     Visitor -->|DNS| Route53
     Route53 -.->|Domain| CloudFront
     Visitor -->|HTTPS| CloudFront
+    WAF[AWS WAF - optional] -.->|Count requests| CloudFront
     ACM -->|Certificate| CloudFront
     CloudFront -->|Private origin| S3
     GitHub[GitHub Actions] -->|OIDC| IAM
@@ -36,6 +37,24 @@ host them separately. AWS and domain registration charges apply.
 Use authorised AWS credentials. Keep variable files and state private; use a
 secure backend for shared state. ACM validation can time out before DNS
 delegation propagates.
+
+### Optional AWS WAF
+
+Set `enable_waf = true` to create a CloudFront-scoped Web ACL in `us-east-1`
+and associate it with the distribution. It is disabled by default. AWS WAF
+and related metrics can incur charges; review [AWS WAF pricing](https://aws.amazon.com/waf/pricing/)
+before enabling it.
+
+The AWS-managed common rule group uses a group-level count override and the
+Web ACL default action is allow, so this configuration does not block requests.
+The override changes the group's result, not the actions inside the group:
+an internally terminating rule can stop evaluation of later rules in that
+group. Review the `PortfolioCommonRules` counted-request metric in CloudWatch
+under AWS WAF in `us-east-1` before considering blocking. Request sampling and
+WAF logging are not enabled. Disabling WAF removes the association and Web ACL
+on the next approved Terraform apply. The configuration includes a Terraform
+state move for a Web ACL previously created at the root resource address;
+review the plan to confirm the move before applying.
 
 | GitHub Actions variable | Terraform output |
 |---|---|

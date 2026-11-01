@@ -43,10 +43,7 @@ data "aws_iam_policy_document" "github_deploy" {
   statement {
     actions = ["s3:PutObject"]
     resources = [
-      "${var.bucket_arn}/portfolio/main.html",
-      "${var.bucket_arn}/portfolio/jp/*.html",
-      "${var.bucket_arn}/portfolio/en/*.html",
-      "${var.bucket_arn}/portfolio/assets/*"
+      "${var.bucket_arn}/portfolio/*",
     ]
   }
 

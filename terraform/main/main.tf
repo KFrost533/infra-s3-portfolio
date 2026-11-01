@@ -64,6 +64,20 @@ module "cloudwatch" {
   function_name = "portfolio-weekly-requests"
 }
 
+module "waf" {
+  count  = var.enable_waf ? 1 : 0
+  source = "../modules/waf"
+
+  providers = {
+    aws = aws.us_east_1
+  }
+}
+
+moved {
+  from = aws_wafv2_web_acl.portfolio[0]
+  to   = module.waf[0].aws_wafv2_web_acl.portfolio
+}
+
 module "cloudfront" {
   source = "../modules/cloudfront"
 
@@ -71,6 +85,7 @@ module "cloudfront" {
   bucket_regional_domain = module.s3.bucket_regional_domain
   certificate_arn        = module.acm.validated_certificate_arn
   domain_name            = var.domain_name
+  web_acl_arn            = var.enable_waf ? module.waf[0].web_acl_arn : ""
 }
 
 module "route53" {

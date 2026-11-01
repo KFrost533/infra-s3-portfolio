@@ -16,6 +16,18 @@ variable "domain_name" {
   default     = "portfolio.kfrost533.click"
 }
 
+variable "enable_waf" {
+  description = "Enable the optional CloudFront WAF web ACL in count-only mode."
+  type        = bool
+  default     = true
+}
+
+variable "waf_web_acl_arn" {
+  description = "ARN of the WAF web ACL."
+  type        = string
+  default     = ""
+}
+
 variable "github_repository" {
   description = "GitHub owner and repository permitted to deploy from the main branch."
   type        = string
