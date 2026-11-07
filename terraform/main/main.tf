@@ -1,5 +1,12 @@
 terraform {
-  required_version = ">= 1.7.0"
+  required_version = ">= 1.10.0"
+
+  backend "s3" {
+    bucket       = "tf-kfrost533"
+    key          = "portfolio/terraform.tfstate"
+    region       = "ap-southeast-2"
+    use_lockfile = true
+  }
 
   required_providers {
     aws = {
@@ -40,6 +47,12 @@ locals {
   hosted_zone_id = jsondecode(file("${path.root}/../creds/main.json")).hosted_zone_id
 }
 
+data "aws_ssm_parameter" "request_report_email" {
+  count           = var.enable_request_report ? 1 : 0
+  name            = var.request_report_email_parameter_name
+  with_decryption = true
+}
+
 module "s3" {
   source = "../modules/s3"
 
@@ -61,7 +74,7 @@ module "acm" {
 module "cloudwatch" {
   count         = var.enable_request_report ? 1 : 0
   source        = "../modules/cloudwatch"
-  function_name = "portfolio-weekly-requests"
+  portfolio_function_name = "portfolio-weekly-requests"
 }
 
 module "waf" {
@@ -124,7 +137,7 @@ module "sns" {
   count  = var.enable_request_report ? 1 : 0
   source = "../modules/sns"
 
-  email_address = var.request_report_email
+  email_address = data.aws_ssm_parameter.request_report_email[0].value
 }
 
 module "lambda" {

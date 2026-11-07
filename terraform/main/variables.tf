@@ -84,9 +84,8 @@ variable "enable_request_report" {
   default     = false
 }
 
-variable "request_report_email" {
-  description = "SNS email recipient for the weekly request report."
+variable "request_report_email_parameter_name" {
+  description = "Name of the existing SSM Parameter Store parameter containing the SNS email recipient."
   type        = string
-  default     = ""
-  sensitive   = true
+  default     = "mail_address"
 }

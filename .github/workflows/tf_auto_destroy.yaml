@@ -1,0 +1,146 @@
+name: Destroy portfolio infrastructure
+
+on:
+  schedule:
+    - cron: "30 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: portfolio-infrastructure
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/main
+        shell: bash
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ vars.DESTROY_ROLE_ARN }}
+      AWS_ACCOUNT_ID: ${{ vars.DESTROY_AWS_ACCOUNT_ID }}
+      PORTFOLIO_BUCKET: ${{ vars.PORTFOLIO_BUCKET }}
+      TF_HOSTED_ZONE_ID: ${{ vars.TF_HOSTED_ZONE_ID }}
+      TF_STATE_BUCKET: "tf-kfrost533"
+      TF_STATE_KEY: portfolio/terraform.tfstate
+      TF_STATE_REGION: "ap-southeast-2"
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Check configuration
+        env:
+          TF_VARS_JSON: ${{ secrets.TF_VARS_JSON }}
+        run: |
+          set -euo pipefail
+          for name in AWS_REGION AWS_ACCOUNT_ID AWS_ROLE_ARN TF_HOSTED_ZONE_ID TF_STATE_BUCKET TF_STATE_KEY TF_STATE_REGION PORTFOLIO_BUCKET TF_VARS_JSON; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing required GitHub Actions variable or secret: $name" >&2
+              exit 1
+            fi
+          done
+          if [[ "$TF_STATE_BUCKET" == "$PORTFOLIO_BUCKET" ]]; then
+            echo "The state bucket must be separate from the portfolio bucket." >&2
+            exit 1
+          fi
+          umask 077
+          printf '%s' "$TF_VARS_JSON" | jq -e 'type == "object"' >/dev/null
+          printf '%s' "$TF_VARS_JSON" > terraform.tfvars.json
+          mkdir -p ../creds
+          jq -n --arg id "$AWS_ACCOUNT_ID" --arg zone "$TF_HOSTED_ZONE_ID" \
+            '{account_id: $id, hosted_zone_id: $zone}' > ../creds/main.json
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.DESTROY_ROLE_ARN }}
+          role-session-name: portfolio-destroy
+
+      - name: Verify AWS account
+        run: |
+          set -euo pipefail
+          actual_account=$(aws sts get-caller-identity --query Account --output text)
+          if [[ "$actual_account" != "$AWS_ACCOUNT_ID" ]]; then
+            echo "Authenticated to unexpected AWS account: $actual_account" >&2
+            exit 1
+          fi
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+
+      - name: Initialize existing remote state
+        run: |
+          set -euo pipefail
+          aws s3api head-object --bucket "$TF_STATE_BUCKET" --key "$TF_STATE_KEY" \
+            --region "$TF_STATE_REGION" --no-cli-pager >/dev/null
+          terraform init -input=false \
+            -backend-config="bucket=$TF_STATE_BUCKET" \
+            -backend-config="key=$TF_STATE_KEY" \
+            -backend-config="region=$TF_STATE_REGION"
+
+      - name: Plan destruction
+        run: terraform plan -destroy -input=false -lock-timeout=5m -out="$RUNNER_TEMP/destroy.tfplan"
+
+      - name: Empty the managed portfolio bucket
+        run: |
+          set -euo pipefail
+          plan="$RUNNER_TEMP/destroy-plan.json"
+          terraform show -json "$RUNNER_TEMP/destroy.tfplan" > "$plan"
+          if ! jq -e --arg state_bucket "$TF_STATE_BUCKET" '
+            all(.resource_changes[]?;
+              ((.change.actions | index("delete")) == null) or
+              ((.type != "aws_s3_bucket" or .change.before.bucket != $state_bucket) and
+               (.type != "aws_iam_openid_connect_provider" or
+                .change.before.url != "https://token.actions.githubusercontent.com")))
+          ' "$plan" >/dev/null; then
+            echo "The plan would delete the state bucket or GitHub OIDC provider." >&2
+            exit 1
+          fi
+          if ! jq -e --arg bucket "$PORTFOLIO_BUCKET" '
+            [.resource_changes[]? |
+              select(.address == "module.s3.aws_s3_bucket.portfolio" and
+                     (.change.actions | index("delete")))] |
+            length <= 1 and all(.[]; .change.before.bucket == $bucket)
+          ' "$plan" >/dev/null; then
+            echo "The planned portfolio bucket does not match PORTFOLIO_BUCKET." >&2
+            exit 1
+          fi
+          if ! jq -e '
+            any(.resource_changes[]?;
+              .address == "module.s3.aws_s3_bucket.portfolio" and
+              (.change.actions | index("delete")))
+          ' "$plan" >/dev/null; then
+            echo "No portfolio bucket deletion is planned; skipping object cleanup."
+            exit 0
+          fi
+
+          while :; do
+            aws s3api list-object-versions --bucket "$PORTFOLIO_BUCKET" \
+              --max-keys 1000 --no-paginate --output json --no-cli-pager > "$RUNNER_TEMP/versions.json"
+            jq '{Objects: [(.Versions // [])[], (.DeleteMarkers // [])[] |
+                {Key, VersionId}], Quiet: true}' "$RUNNER_TEMP/versions.json" > "$RUNNER_TEMP/delete.json"
+            if [[ "$(jq '.Objects | length' "$RUNNER_TEMP/delete.json")" == 0 ]]; then
+              break
+            fi
+            aws s3api delete-objects --bucket "$PORTFOLIO_BUCKET" \
+              --delete "file://$RUNNER_TEMP/delete.json" --output json --no-cli-pager > "$RUNNER_TEMP/deleted.json"
+            if ! jq -e '(.Errors // []) | length == 0' "$RUNNER_TEMP/deleted.json" >/dev/null; then
+              echo "S3 reported errors deleting object versions:" >&2
+              jq '.Errors' "$RUNNER_TEMP/deleted.json" >&2
+              exit 1
+            fi
+          done
+
+      - name: Apply destruction plan
+        run: terraform apply -input=false -lock-timeout=5m "$RUNNER_TEMP/destroy.tfplan"

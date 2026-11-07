@@ -18,94 +18,121 @@ flowchart LR
     SNS -->|Email| Subscriber
 ```
 
-**Review content before publishing:** HTML becomes public. Embed assets or
-host them separately. AWS and domain registration charges apply.
+**Before publishing:** HTML is public. Embed assets or host them separately.
+AWS and domain registration charges apply.
 
 
 ## Setup
 
-| Step | Action |
-|---|---|
-| 1 | Publish as `KFrost533/infra-s3-portfolio`; protect `main` and restrict workflow access. Keep the GitHub owner and repository IDs in `terraform/main/variables.tf` aligned with this repository. |
-| 2 | Copy `terraform/main/terraform.tfvars.example` to `terraform.tfvars`. Set a unique bucket and registered domain. Set the hosted zone ID in the local `terraform/creds/main.json` configuration. |
-| 3 | Set `github_oidc_provider_arn` if the account already has one; otherwise Terraform creates it. Do not delete a shared provider. |
-| 4 | From `terraform/main`, run `terraform init` and `terraform validate`. Terraform adds records to the supplied hosted zone; it does not create or delete hosted zones. |
-| 5 | Ensure the domain registration delegates to that hosted zone. Route 53 does not register the domain when only a hosted zone is created. |
-| 6 | Review the full `terraform plan`, including record replacements, before applying. The former Terraform-managed zone is removed from state without being deleted; remove any unused zone manually only after confirming it is no longer needed. Keep the ACM validation CNAME for renewal. |
-| 7 | Set the GitHub Actions variables below from Terraform outputs. |
+1. Publish as `KFrost533/infra-s3-portfolio`; protect `main`. Match the owner and repository IDs in `terraform/main/variables.tf`.
+2. Copy `terraform.tfvars.example`; set a unique bucket, registered domain, and hosted zone ID in local `terraform/creds/main.json`.
+3. Set `github_oidc_provider_arn` if one exists. Do not delete a shared provider.
+4. Configure the S3 backend, then run `terraform init` and `terraform validate` in `terraform/main`. Terraform only adds records to the supplied zone.
+5. Delegate the domain to that zone; creating a hosted zone does not register a domain.
+6. Review the full plan before applying. The former managed zone leaves state but is not deleted. Keep the ACM validation CNAME for renewal.
+7. Set GitHub Actions variables from Terraform outputs.
 
-Use authorised AWS credentials. Keep variable files and state private; use a
-secure backend for shared state. ACM validation can time out before DNS
-delegation propagates.
+### Automatic Terraform apply
+
+- Pushes to `main` that change `terraform/main/**` or `terraform/modules/**` run plan and apply; manual runs are also available.
+- Configure `TF_APPLY_ROLE_ARN` from bootstrap output, plus `AWS_ACCOUNT_ID`, `AWS_REGION`, `PORTFOLIO_BUCKET`, `TF_HOSTED_ZONE_ID`, and secret `TF_VARS_JSON`.
+- Grant the role Terraform resource permissions, remote-state S3 access, and `ssm:GetParameter` (plus `kms:Decrypt` for a customer-key-encrypted email parameter).
+- Automatic apply blocks plans containing deletions or replacements. Review those changes and use a deliberate manual process.
+
+Bootstrap resources are managed separately from `terraform/main` and must
+survive its destruction:
+
+- `terraform/bootstrap` manages the GitHub OIDC provider and separate apply/destroy roles. Bootstrap it manually with administrative AWS credentials; see [its README](terraform/bootstrap/README.md).
+- Create the state bucket `tf-kfrost533` in `ap-southeast-2` beforehand, with versioning, encryption, and public access blocked. Bootstrap stores its state under a separate key in this bucket.
+- Keep the Route 53 hosted zone and domain registration outside `terraform/main`; Terraform only manages records in the supplied zone.
+- Create the SSM email parameter (default `mail_address`) beforehand if the weekly report is enabled.
+
+For a rebuild, keep the remote state bucket and an empty or accurate state.
+Terraform destroy leaves an empty state; do not delete or manually edit the
+state object. Resources deleted outside Terraform require state reconciliation
+before automatic apply.
+
+Use authorised credentials. Keep variables and state private; use a secure
+shared backend. ACM validation may time out before DNS propagation.
+
+### Automatic infrastructure destruction
+
+- **Schedule:** Daily 19:00 JST (10:00 UTC), or manually from `main`. GitHub may delay or disable schedules; disable this workflow if deletion is not intended.
+- **Deletion:** Destroys resources in the selected state. Portfolio bucket objects, versions, and delete markers are permanently deleted; the site goes offline. Hosted zones, domains, and out-of-state resources remain.
+- **Failures:** Object Lock, permissions, or dependencies may block deletion. Check failed runs and remaining resources; no alert is configured.
+
+Setup:
+
+1. Create a separate private state bucket outside this state. Enable versioning and encryption, block public access, restrict access, and retain it. Use Terraform 1.16.6; locking uses S3.
+2. Back up local state, then migrate from `terraform/main`:
+
+   ```powershell
+   terraform init -migrate-state -backend-config="bucket=YOUR_STATE_BUCKET" `
+     -backend-config="key=portfolio/terraform.tfstate" `
+     -backend-config="region=YOUR_STATE_BUCKET_REGION"
+   ```
+
+  Verify `terraform state list` against the backup. Keep state, tfvars, and credentials private.
+3. Create a dedicated destroy OIDC role/provider outside this state. Restrict trust to this repository's `main` and `sts.amazonaws.com`. Grant required resource deletion, S3 state/lock, version, and KMS permissions in both regions. Protect role/workflow changes; do not reuse the deploy role. Move any managed OIDC provider to independent state and set `github_oidc_provider_arn`; deletion is blocked otherwise.
+4. Set repository variables:
+   - `AWS_REGION`: portfolio region, matching the original tfvars.
+   - `DESTROY_AWS_ACCOUNT_ID`: portfolio AWS account ID.
+   - `DESTROY_ROLE_ARN`: independent destroy role ARN.
+   - `TF_STATE_BUCKET`, `TF_STATE_KEY`, `TF_STATE_REGION`: migrated state location.
+   - `TF_HOSTED_ZONE_ID`: ID from `terraform/creds/main.json`.
+   - `PORTFOLIO_BUCKET`: portfolio bucket name, matching the state.
+5. Set secret `TF_VARS_JSON` to the original apply values, including optional and sensitive values. The workflow verifies the state and planned bucket.
+
+- Use one backend, key, and S3 lock for all Terraform operations. Do not run Terraform or write objects during cleanup/destroy; the lock has a gap between operations.
+- Cancellation, errors, or concurrent changes can leave partial destruction. Inspect the run and state before retrying.
 
 ### Optional AWS WAF
 
-Set `enable_waf = true` to create a CloudFront-scoped Web ACL in `us-east-1`
-and associate it with the distribution. It is disabled by default. AWS WAF
-and related metrics can incur charges; review [AWS WAF pricing](https://aws.amazon.com/waf/pricing/)
-before enabling it.
+Set `enable_waf = true` to attach a CloudFront Web ACL in `us-east-1` (default: disabled). WAF and metrics may cost extra; see [AWS WAF pricing](https://aws.amazon.com/waf/pricing/).
 
-The AWS-managed common rule group uses a group-level count override and the
-Web ACL default action is allow, so this configuration does not block requests.
-The override changes the group's result, not the actions inside the group:
-an internally terminating rule can stop evaluation of later rules in that
-group. Review the `PortfolioCommonRules` counted-request metric in CloudWatch
-under AWS WAF in `us-east-1` before considering blocking. Request sampling and
-WAF logging are not enabled. Disabling WAF removes the association and Web ACL
-on the next approved Terraform apply. The configuration includes a Terraform
-state move for a Web ACL previously created at the root resource address;
-review the plan to confirm the move before applying.
+The common rule group is counted and the Web ACL allows requests; it does not block. Internal terminating rules may stop later group rules. Review `PortfolioCommonRules` in CloudWatch before considering blocking. Sampling/logging are off. Disabling WAF removes it on the next apply. Review the plan's state move for the former root-address Web ACL.
 
-| GitHub Actions variable | Terraform output |
-|---|---|
-| `AWS_REGION` | `aws_region` |
-| `PORTFOLIO_BUCKET` | `bucket_name` |
-| `AWS_ROLE_ARN` | `deploy_role_arn` |
+GitHub Actions variables:
+
+- `AWS_REGION`: Terraform output `aws_region`
+- `PORTFOLIO_BUCKET`: Terraform output `bucket_name`
+- `AWS_ROLE_ARN`: Terraform output `deploy_role_arn`
 
 
 ### Terraform logs
 
-From `terraform/main`, use PowerShell 7 to log a command:
+From `terraform/main`, use PowerShell 7:
 
 ```powershell
 ..\terraform-log.ps1 plan
 ```
 
-Replace `plan` with `init`, `apply`, `destroy` or another Terraform command.
-Logs are in `terraform/log`, which Git ignores. They may contain sensitive
-data; restrict access. Direct Terraform commands are not logged.
+Replace `plan` with any Terraform command. Logs go to Git-ignored `terraform/log`; restrict access because they may contain sensitive data. Direct commands are not logged.
 
 
 ## Publishing
 
-| Step | Action |
-|---|---|
-| 1 | Edit and commit the career, skills, and projects pages under `portfolio/jp` and `portfolio/en` on `main`. Each HTML file is limited to 10 MiB. |
-| 2 | The build applies `portfolio/assets/portfolio.css` and rejects unsupported template syntax. It also supports HTML fragments and career experience includes when the corresponding text files are provided. |
-| 3 | A portfolio change pushed to `main` deploys automatically; **Deploy portfolio HTML to S3** can also run manually. The workflow uploads generated HTML, the shared stylesheet, and a link index. |
-| 4 | Open the `portfolio_url` output or `https://your-domain/portfolio/main.html`. The index links to the three pages in each language; each page links to the other sections and its translated counterpart. |
+1. Edit and commit pages under `portfolio/jp` and `portfolio/en` on `main` (max 10 MiB per HTML file).
+2. The build applies `portfolio/assets/portfolio.css`, rejects unsupported template syntax, and supports HTML fragments and career includes.
+3. Push to `main` or run **Deploy portfolio HTML to S3** manually. It uploads generated HTML, CSS, and a link index.
+4. Open `portfolio_url` or `https://your-domain/portfolio/main.html`. The index links to all language pages and their sections.
 
-| Operation | Behaviour |
-|---|---|
-| Cache | The workflow requires exactly one distribution tagged `Project=portfolio` with the configured S3 origin. After upload, it invalidates `/*` and waits. The role has account-wide invalidation access; excess invalidations may incur charges. |
-| Removal | Superseded pages removed from Git remain accessible in S3 until deleted separately; the deployment does not delete them. |
-| Failure | Earlier uploads may succeed; the main page uploads last. |
-| Rollback | An authorised principal can restore an S3 version; the deployment role cannot list versions or delete files. |
-| Cleanup | Handle stored object versions before deleting the stack. |
+- **Cache:** Requires one `Project=portfolio` distribution with the configured S3 origin; invalidates `/*` and waits. Account-wide invalidation may incur charges.
+- **Removal:** Superseded S3 pages are not deleted automatically.
+- **Failure:** Earlier uploads may succeed; the main page uploads last.
+- **Rollback:** An authorised principal can restore versions; the deploy role cannot list versions or delete files.
+- **Cleanup:** Handle object versions before stack deletion.
 
-CloudFront caching is disabled. Language directory URLs do not resolve
-`index.html` automatically; existing websites are not redirected.
+CloudFront caching is off. Language directory URLs do not resolve `index.html`; existing sites are not redirected.
 
 ## Optional weekly request report
 
-| Item | Details |
-|---|---|
-| Schedule | Monday 09:00 Japan time; previous seven complete Japan-time days. |
-| Data | CloudFront `Requests` from CloudWatch in `us-east-1`; includes bots, errors and assets, not unique visitors. Missing metric data is labelled, not counted as zero. |
-| Enable | Set `enable_request_report = true` and `request_report_email` in an uncommitted `terraform.tfvars`; review the plan before applying. Confirm the SNS subscription email. |
-| Security | The email address is stored in Terraform state despite being marked sensitive. Protect state and logs. Lambda can read CloudWatch metrics and publish only to this SNS topic. |
-| Operations | Lambda logs are retained for 30 days. Scheduler and Lambda retries can result in duplicate emails; inspect CloudWatch logs and Scheduler metrics for failures. No dead-letter queue is configured. |
-| Cost | SNS, Lambda, Scheduler, CloudWatch and log storage may incur charges. |
+- **Schedule:** Monday 09:00 Japan time; reports the previous seven complete days.
+- **Data:** CloudFront `Requests` in `us-east-1`; includes bots, errors, and assets, not unique visitors. Missing data is labelled, not treated as zero.
+- **Enable:** Set `enable_request_report = true`; optionally set `request_report_email_parameter_name` (default `mail_address`). The parameter must be in the Terraform AWS region. Grant the Terraform identity `ssm:GetParameter` and, for a customer-key-encrypted `SecureString`, `kms:Decrypt`. Review the plan and confirm the SNS email subscription.
+- **Security:** SSM lookup does not keep the value out of Terraform state; protect state/logs. Lambda reads metrics and publishes only to this SNS topic.
+- **Operations:** Logs retained 30 days. Retries may duplicate emails; check CloudWatch/Scheduler for failures. No dead-letter queue.
+- **Cost:** SNS, Lambda, Scheduler, CloudWatch, and logs may incur charges.
 
 Terraform packages the Lambda source with the `hashicorp/archive` provider.
 The function uses the AWS SDK included in the Lambda Python runtime.

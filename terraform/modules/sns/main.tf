@@ -10,7 +10,7 @@ resource "aws_sns_topic_subscription" "email" {
   lifecycle {
     precondition {
       condition     = can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.email_address))
-      error_message = "Set request_report_email to a valid email address before enabling the request report."
+      error_message = "The SSM parameter configured for the request report must contain a valid email address."
     }
   }
 }

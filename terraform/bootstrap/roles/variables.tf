@@ -1,0 +1,13 @@
+variable "aws_region" { type = string }
+variable "partition" { type = string }
+variable "account_id" { type = string }
+variable "oidc_provider_arn" { type = string }
+variable "oidc_subject" { type = string }
+variable "apply_role_name" { type = string }
+variable "destroy_role_name" { type = string }
+variable "deploy_role_name" { type = string }
+variable "report_function_name" { type = string }
+variable "state_bucket_arn" { type = string }
+variable "portfolio_bucket_arn" { type = string }
+variable "hosted_zone_id" { type = string }
+variable "request_report_email_parameter" { type = string }

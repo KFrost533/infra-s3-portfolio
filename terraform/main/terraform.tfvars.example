@@ -10,6 +10,7 @@ github_repository_id       = "1441557129"
 # Optional AWS WAF Web ACL in count mode. Enabling it incurs AWS WAF charges.
 # enable_waf = true
 
-# Optional weekly CloudFront request report. The recipient must confirm the SNS subscription.
+# Optional weekly CloudFront request report. The SSM parameter must exist;
+# its email recipient must confirm the SNS subscription.
 # enable_request_report = true
-# request_report_email  = "recipient@example.com"
+# request_report_email_parameter_name = "mail_address"
