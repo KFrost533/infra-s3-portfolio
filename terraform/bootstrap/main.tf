@@ -44,7 +44,7 @@ locals {
 }
 
 module "github_actions_roles" {
-  source = "./roles"
+  source = "./modules/roles"
 
   aws_region                     = var.aws_region
   partition                      = local.partition

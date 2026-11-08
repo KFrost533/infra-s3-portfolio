@@ -36,7 +36,7 @@ run "waf_module_counts_requests" {
   command = plan
 
   module {
-    source = "../modules/waf"
+    source = "./modules/waf"
   }
 
   assert {
@@ -58,7 +58,7 @@ run "cloudfront_accepts_web_acl" {
   command = plan
 
   module {
-    source = "../modules/cloudfront"
+    source = "./modules/cloudfront"
   }
 
   variables {

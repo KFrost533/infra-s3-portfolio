@@ -34,7 +34,7 @@ AWS and domain registration charges apply.
 
 ### Automatic Terraform apply
 
-- Pushes to `main` that change `terraform/main/**` or `terraform/modules/**` run plan and apply; manual runs are also available.
+- Scheduled runs and manual runs from `main` plan and apply the configuration in `terraform/main`, including its `modules` directory.
 - Configure `TF_APPLY_ROLE_ARN` from bootstrap output, plus `AWS_ACCOUNT_ID`, `AWS_REGION`, `PORTFOLIO_BUCKET`, `TF_HOSTED_ZONE_ID`, and secret `TF_VARS_JSON`.
 - Grant the role Terraform resource permissions, remote-state S3 access, and `ssm:GetParameter` (plus `kms:Decrypt` for a customer-key-encrypted email parameter).
 - Automatic apply blocks plans containing deletions or replacements. Review those changes and use a deliberate manual process.

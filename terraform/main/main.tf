@@ -54,14 +54,14 @@ data "aws_ssm_parameter" "request_report_email" {
 }
 
 module "s3" {
-  source = "../modules/s3"
+  source = "./modules/s3"
 
   bucket_name                 = var.bucket_name
   cloudfront_distribution_arn = module.cloudfront.distribution_arn
 }
 
 module "acm" {
-  source = "../modules/acm"
+  source = "./modules/acm"
 
   providers = {
     aws = aws.us_east_1
@@ -73,13 +73,13 @@ module "acm" {
 
 module "cloudwatch" {
   count         = var.enable_request_report ? 1 : 0
-  source        = "../modules/cloudwatch"
+  source        = "./modules/cloudwatch"
   portfolio_function_name = "portfolio-weekly-requests"
 }
 
 module "waf" {
   count  = var.enable_waf ? 1 : 0
-  source = "../modules/waf"
+  source = "./modules/waf"
 
   providers = {
     aws = aws.us_east_1
@@ -92,7 +92,7 @@ moved {
 }
 
 module "cloudfront" {
-  source = "../modules/cloudfront"
+  source = "./modules/cloudfront"
 
   bucket_name            = module.s3.bucket_name
   bucket_regional_domain = module.s3.bucket_regional_domain
@@ -102,7 +102,7 @@ module "cloudfront" {
 }
 
 module "route53" {
-  source = "../modules/route53"
+  source = "./modules/route53"
 
   hosted_zone_id            = local.hosted_zone_id
   domain_name               = var.domain_name
@@ -112,7 +112,7 @@ module "route53" {
 }
 
 module "iam_publish" {
-  source = "../modules/iam/publish"
+  source = "./modules/iam/publish"
 
   bucket_arn                  = module.s3.bucket_arn
   cloudfront_distribution_arn = module.cloudfront.distribution_arn
@@ -125,7 +125,7 @@ module "iam_publish" {
 
 module "iam_report" {
   count  = var.enable_request_report ? 1 : 0
-  source = "../modules/iam/report"
+  source = "./modules/iam/report"
 
   enable_request_report = var.enable_request_report
   report_topic_arn      = module.sns[0].topic_arn
@@ -135,14 +135,14 @@ module "iam_report" {
 
 module "sns" {
   count  = var.enable_request_report ? 1 : 0
-  source = "../modules/sns"
+  source = "./modules/sns"
 
   email_address = data.aws_ssm_parameter.request_report_email[0].value
 }
 
 module "lambda" {
   count  = var.enable_request_report ? 1 : 0
-  source = "../modules/lambda"
+  source = "./modules/lambda"
 
   function_name   = "portfolio-weekly-requests"
   role_arn        = module.iam_report[0].report_lambda_role_arn
@@ -153,7 +153,7 @@ module "lambda" {
 
 module "evbs" {
   count  = var.enable_request_report ? 1 : 0
-  source = "../modules/evbs"
+  source = "./modules/evbs"
 
   function_arn = module.lambda[0].function_arn
   role_arn     = module.iam_report[0].report_scheduler_role_arn

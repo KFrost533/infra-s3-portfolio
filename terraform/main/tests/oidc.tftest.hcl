@@ -24,7 +24,7 @@ run "publish_uses_bootstrap_provider" {
   command = plan
 
   module {
-    source = "../modules/iam/publish"
+    source = "./modules/iam/publish"
   }
 
   variables {
@@ -62,7 +62,7 @@ run "forget_legacy_provider" {
   state_key = "oidc_migration"
 
   module {
-    source = "../modules/iam/publish"
+    source = "./modules/iam/publish"
   }
 
   variables {
