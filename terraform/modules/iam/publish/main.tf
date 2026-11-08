@@ -1,14 +1,14 @@
-resource "aws_iam_openid_connect_provider" "github" {
-  count = var.github_oidc_provider_arn == null ? 1 : 0
+removed {
+  from = aws_iam_openid_connect_provider.github
 
-  url            = "https://token.actions.githubusercontent.com"
-  client_id_list = ["sts.amazonaws.com"]
+  lifecycle {
+    destroy = false
+  }
 }
 
 locals {
-  github_oidc_provider_arn = var.github_oidc_provider_arn != null ? var.github_oidc_provider_arn : aws_iam_openid_connect_provider.github[0].arn
-  github_repository_parts  = split("/", var.github_repository)
-  github_oidc_subject      = "repo:${local.github_repository_parts[0]}@${var.github_repository_owner_id}/${local.github_repository_parts[1]}@${var.github_repository_id}:ref:refs/heads/main"
+  github_repository_parts = split("/", var.github_repository)
+  github_oidc_subject     = "repo:${local.github_repository_parts[0]}@${var.github_repository_owner_id}/${local.github_repository_parts[1]}@${var.github_repository_id}:ref:refs/heads/main"
 }
 
 data "aws_iam_policy_document" "github_trust" {
@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "github_trust" {
 
     principals {
       type        = "Federated"
-      identifiers = [local.github_oidc_provider_arn]
+      identifiers = [var.github_oidc_provider_arn]
     }
 
     condition {

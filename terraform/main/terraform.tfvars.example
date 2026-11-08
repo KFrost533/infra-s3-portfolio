@@ -4,7 +4,7 @@ domain_name      = "portfolio.example.com"
 github_repository_owner_id = "155362696"
 github_repository_id       = "1441557129"
 
-# If the account already has the GitHub Actions OIDC provider, set its ARN.
+# Set this to the github_oidc_provider_arn output from terraform/bootstrap.
 # github_oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
 
 # Optional AWS WAF Web ACL in count mode. Enabling it incurs AWS WAF charges.

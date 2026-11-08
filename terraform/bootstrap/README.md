@@ -23,13 +23,58 @@ terraform init
 ```
 
 If the GitHub OIDC provider already exists in this AWS account, import it before
-planning. This adopts it into the bootstrap state instead of trying to create a
-duplicate:
+planning. If another Terraform state manages it, follow the migration procedure
+below instead of independently importing it.
 
 ```powershell
 $AccountId = aws sts get-caller-identity --query Account --output text
 terraform import aws_iam_openid_connect_provider.github "arn:aws:iam::$AccountId`:oidc-provider/token.actions.githubusercontent.com"
 ```
+
+### Migrating a provider from `terraform/main`
+
+Stop automated Terraform workflows and all other operations on both states for
+the entire migration. Use the same intended AWS account, backend and Terraform
+workspace as the original main deployment and the bootstrap deployment. Confirm
+the caller account with `aws sts get-caller-identity` and check both workspaces
+with `terraform workspace show`. Back up both states securely (they can contain
+secrets); ensure the remote state bucket's versioning is enabled.
+
+1. In `terraform/main`, run `terraform state list`. If it contains
+   `module.iam_publish.aws_iam_openid_connect_provider.github[0]`, inspect it:
+
+   ```powershell
+   terraform state show 'module.iam_publish.aws_iam_openid_connect_provider.github[0]'
+   ```
+
+   Record its ARN, confirm it belongs to the intended account, and ensure the
+   main `github_oidc_provider_arn` input is that exact ARN. If this address is
+   absent, determine which state owns the provider before continuing.
+2. In `terraform/bootstrap`, run `terraform state list`. If the provider is not
+   already in this state, import the exact ARN recorded above:
+
+   ```powershell
+   terraform import aws_iam_openid_connect_provider.github 'YOUR_PROVIDER_ARN'
+   ```
+
+   Verify it with `terraform state show aws_iam_openid_connect_provider.github`.
+   Do not proceed if import or verification fails. Both states temporarily
+   reference the same resource; do not run plan, apply, or destroy concurrently.
+3. Back in `terraform/main`, remove only the old state binding:
+
+   ```powershell
+   terraform state rm 'module.iam_publish.aws_iam_openid_connect_provider.github[0]'
+   terraform state list
+   ```
+
+   This does not delete the AWS provider. Confirm the old address is absent and
+   the bootstrap address remains present. The module's `removed` block also
+   prevents Terraform from deleting the provider if an older main state is
+   applied before this manual removal.
+4. Review `terraform plan` in each root. In particular, check for changes to
+   the shared OIDC provider's client IDs, thumbprints, and tags in the bootstrap
+   plan, and verify that main does not create or delete it. Apply only after
+   reviewing all changes; resume automation after the migration is verified.
 
 Then review and apply:
 

@@ -47,6 +47,7 @@ variable "portfolio_bucket_name" {
 variable "hosted_zone_id" {
   description = "Existing Route 53 hosted zone that terraform/main updates."
   type        = string
+  default     = ""
 }
 
 variable "request_report_email_parameter" {

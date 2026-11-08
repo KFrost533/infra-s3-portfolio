@@ -1,8 +1,9 @@
-name: Destroy portfolio infrastructure
+name: Auto Destroy portfolio infrastructure
 
 on:
   schedule:
-    - cron: "30 18 * * *"
+    # JST 19:00
+    - cron: "0 10 * * *"
   workflow_dispatch:
 
 permissions:

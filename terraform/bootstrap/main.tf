@@ -39,6 +39,10 @@ resource "aws_iam_openid_connect_provider" "github" {
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1", "1b511abead59c6ce207077c0bf0e0043b1382612"]
 }
 
+locals {
+  hosted_zone_id = jsondecode(file("${path.root}/../creds/main.json")).hosted_zone_id
+}
+
 module "github_actions_roles" {
   source = "./roles"
 
@@ -53,6 +57,6 @@ module "github_actions_roles" {
   report_function_name           = var.report_function_name
   state_bucket_arn               = local.state_bucket_arn
   portfolio_bucket_arn           = local.portfolio_bucket_arn
-  hosted_zone_id                 = var.hosted_zone_id
+  hosted_zone_id                 = local.hosted_zone_id
   request_report_email_parameter = var.request_report_email_parameter
 }

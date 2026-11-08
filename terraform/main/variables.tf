@@ -62,12 +62,12 @@ variable "github_repository_id" {
 }
 
 variable "github_oidc_provider_arn" {
-  description = "Existing GitHub OIDC provider ARN; set to null only when Terraform should create one."
+  description = "GitHub OIDC provider ARN managed by the bootstrap stack."
   type        = string
   default     = "arn:aws:iam::204806963442:oidc-provider/token.actions.githubusercontent.com"
 
   validation {
-    condition     = var.github_oidc_provider_arn == null ? true : can(regex("^arn:[^:]+:iam::[0-9]{12}:oidc-provider/token[.]actions[.]githubusercontent[.]com$", var.github_oidc_provider_arn))
+    condition     = var.github_oidc_provider_arn == null ? false : can(regex("^arn:[^:]+:iam::[0-9]{12}:oidc-provider/token[.]actions[.]githubusercontent[.]com$", var.github_oidc_provider_arn))
     error_message = "The OIDC provider ARN must identify the GitHub Actions provider."
   }
 }

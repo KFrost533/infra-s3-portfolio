@@ -14,8 +14,9 @@ variable "deploy_role_name" {
 }
 
 variable "github_oidc_provider_arn" {
-  description = "Existing GitHub OIDC provider ARN, or null to create one."
+  description = "GitHub OIDC provider ARN managed by the bootstrap stack."
   type        = string
+  nullable    = false
 }
 
 variable "github_repository" {

@@ -1,12 +1,9 @@
-name: Apply portfolio infrastructure
+name: Auto Apply portfolio infrastructure
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "terraform/main/**"
-      - "terraform/modules/**"
-      - ".github/workflows/tf_auto_create.yaml"
+  schedule:
+    # JST 12:00 AM
+    - cron: "00 3 * * *"
   workflow_dispatch:
 
 permissions:

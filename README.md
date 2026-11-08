@@ -26,7 +26,7 @@ AWS and domain registration charges apply.
 
 1. Publish as `KFrost533/infra-s3-portfolio`; protect `main`. Match the owner and repository IDs in `terraform/main/variables.tf`.
 2. Copy `terraform.tfvars.example`; set a unique bucket, registered domain, and hosted zone ID in local `terraform/creds/main.json`.
-3. Set `github_oidc_provider_arn` if one exists. Do not delete a shared provider.
+3. Bootstrap the GitHub OIDC provider and set `github_oidc_provider_arn` to the bootstrap output. Do not delete a shared provider.
 4. Configure the S3 backend, then run `terraform init` and `terraform validate` in `terraform/main`. Terraform only adds records to the supplied zone.
 5. Delegate the domain to that zone; creating a hosted zone does not register a domain.
 6. Review the full plan before applying. The former managed zone leaves state but is not deleted. Keep the ACM validation CNAME for renewal.
