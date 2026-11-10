@@ -101,13 +101,25 @@ GitHub Actions variables:
 
 ### Terraform logs
 
-From `terraform/main`, use PowerShell 7:
+To save local Terraform output, run the logging wrapper instead of invoking
+`terraform` directly. From either `terraform/main` or `terraform/bootstrap`,
+use PowerShell 7:
 
 ```powershell
+..\terraform-log.ps1 init
 ..\terraform-log.ps1 plan
+..\terraform-log.ps1 apply
+..\terraform-log.ps1 destroy
 ```
 
-Replace `plan` with any Terraform command. Logs go to Git-ignored `terraform/log`; restrict access because they may contain sensitive data. Direct commands are not logged.
+Run `apply` and `destroy` only when intended, after reviewing the plan.
+Additional Terraform arguments can follow the command, for example
+`..\terraform-log.ps1 plan -input=false`. Each invocation prints its log path
+and writes standard output and errors to a separate file under the
+Git-ignored `terraform/log` directory. Logs may contain sensitive data; restrict
+access. Running `terraform` directly bypasses the wrapper and is not logged
+there. GitHub Actions logs are available in the Actions run, not this local
+directory.
 
 
 ## Publishing

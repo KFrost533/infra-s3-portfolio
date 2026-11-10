@@ -22,6 +22,10 @@ From this directory:
 terraform init
 ```
 
+For a local output log, run `..\terraform-log.ps1 init` instead; the wrapper
+also accepts `plan` and `apply` and writes logs under `terraform/log`. Direct
+Terraform commands do not produce files there.
+
 If the GitHub OIDC provider already exists in this AWS account, import it before
 planning. If another Terraform state manages it, follow the migration procedure
 below instead of independently importing it.

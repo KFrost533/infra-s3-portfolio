@@ -3,7 +3,7 @@ name: Auto Destroy portfolio infrastructure
 on:
   schedule:
     # JST 19:00
-    - cron: "0 10 * * *"
+    - cron: "0 10 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -24,10 +24,9 @@ jobs:
         shell: bash
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
-      AWS_ROLE_ARN: ${{ vars.DESTROY_ROLE_ARN }}
-      AWS_ACCOUNT_ID: ${{ vars.DESTROY_AWS_ACCOUNT_ID }}
+      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       PORTFOLIO_BUCKET: ${{ vars.PORTFOLIO_BUCKET }}
-      TF_HOSTED_ZONE_ID: ${{ vars.TF_HOSTED_ZONE_ID }}
+      TF_DESTROY_ROLE_ARN: ${{ vars.TF_DESTROY_ROLE_ARN }}
       TF_STATE_BUCKET: "tf-kfrost533"
       TF_STATE_KEY: portfolio/terraform.tfstate
       TF_STATE_REGION: "ap-southeast-2"
@@ -38,10 +37,10 @@ jobs:
 
       - name: Check configuration
         env:
-          TF_VARS_JSON: ${{ secrets.TF_VARS_JSON }}
+          TF_VARS_JSON: ">= 1.10.0"
         run: |
           set -euo pipefail
-          for name in AWS_REGION AWS_ACCOUNT_ID AWS_ROLE_ARN TF_HOSTED_ZONE_ID TF_STATE_BUCKET TF_STATE_KEY TF_STATE_REGION PORTFOLIO_BUCKET TF_VARS_JSON; do
+          for name in AWS_REGION AWS_ACCOUNT_ID TF_DESTROY_ROLE_ARN TF_STATE_BUCKET TF_STATE_KEY TF_STATE_REGION PORTFOLIO_BUCKET TF_VARS_JSON; do
             if [[ -z "${!name}" ]]; then
               echo "Missing required GitHub Actions variable or secret: $name" >&2
               exit 1
@@ -55,14 +54,14 @@ jobs:
           printf '%s' "$TF_VARS_JSON" | jq -e 'type == "object"' >/dev/null
           printf '%s' "$TF_VARS_JSON" > terraform.tfvars.json
           mkdir -p ../creds
-          jq -n --arg id "$AWS_ACCOUNT_ID" --arg zone "$TF_HOSTED_ZONE_ID" \
-            '{account_id: $id, hosted_zone_id: $zone}' > ../creds/main.json
+          jq -n --arg id "$AWS_ACCOUNT_ID" \
+            '{account_id: $id}' > ../creds/main.json
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ vars.DESTROY_ROLE_ARN }}
+          role-to-assume: ${{ vars.TF_DESTROY_ROLE_ARN }}
           role-session-name: portfolio-destroy
 
       - name: Verify AWS account

@@ -2,8 +2,8 @@ name: Auto Apply portfolio infrastructure
 
 on:
   schedule:
-    # JST 12:00 AM
-    - cron: "00 3 * * *"
+    # JST 09:00 AM
+    - cron: "00 0 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,6 @@ jobs:
       AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
       PORTFOLIO_BUCKET: ${{ vars.PORTFOLIO_BUCKET }}
       TF_APPLY_ROLE_ARN: ${{ vars.TF_APPLY_ROLE_ARN }}
-      TF_HOSTED_ZONE_ID: ${{ vars.TF_HOSTED_ZONE_ID }}
       TF_STATE_BUCKET: "tf-kfrost533"
       TF_STATE_KEY: portfolio/terraform.tfstate
       TF_STATE_REGION: "ap-southeast-2"
@@ -38,10 +37,10 @@ jobs:
 
       - name: Check configuration
         env:
-          TF_VARS_JSON: ${{ secrets.TF_VARS_JSON }}
+          TF_VARS_JSON: ">= 1.10.0"
         run: |
           set -euo pipefail
-          for name in AWS_REGION AWS_ACCOUNT_ID PORTFOLIO_BUCKET TF_APPLY_ROLE_ARN TF_HOSTED_ZONE_ID TF_STATE_BUCKET TF_STATE_KEY TF_STATE_REGION TF_VARS_JSON; do
+          for name in AWS_REGION AWS_ACCOUNT_ID PORTFOLIO_BUCKET TF_APPLY_ROLE_ARN TF_STATE_BUCKET TF_STATE_KEY TF_STATE_REGION TF_VARS_JSON; do
             if [[ -z "${!name}" ]]; then
               echo "Missing required GitHub Actions variable or secret: $name" >&2
               exit 1
@@ -55,8 +54,8 @@ jobs:
           printf '%s' "$TF_VARS_JSON" | jq -e 'type == "object"' >/dev/null
           printf '%s' "$TF_VARS_JSON" > terraform.tfvars.json
           mkdir -p ../creds
-          jq -n --arg id "$AWS_ACCOUNT_ID" --arg zone "$TF_HOSTED_ZONE_ID" \
-            '{account_id: $id, hosted_zone_id: $zone}' > ../creds/main.json
+          jq -n --arg id "$AWS_ACCOUNT_ID" \
+            '{account_id: $id}' > ../creds/main.json
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

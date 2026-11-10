@@ -27,12 +27,13 @@ using System.Threading.Tasks;
 
 public static class TerraformLogRunner
 {
-    public static int Run(string executable, string[] arguments, StreamWriter log)
+    public static int Run(string executable, string[] arguments, string workingDirectory, StreamWriter log)
     {
         var start = new ProcessStartInfo(executable) {
             UseShellExecute = false,
             RedirectStandardOutput = true,
-            RedirectStandardError = true
+            RedirectStandardError = true,
+            WorkingDirectory = workingDirectory
         };
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Terraform could not be started.");
@@ -69,7 +70,11 @@ public static class TerraformLogRunner
     $logWriter = [System.IO.StreamWriter]::new($stream, [System.Text.UTF8Encoding]::new($false))
     $logWriter.AutoFlush = $true
     Write-Host "Terraform output log: $logPath"
-    $result = [TerraformLogRunner]::Run($terraform.Source, $TerraformArguments, $logWriter)
+    $currentLocation = Get-Location
+    if ($currentLocation.Provider.Name -ne 'FileSystem') {
+        throw 'Terraform must be run from a file system directory.'
+    }
+    $result = [TerraformLogRunner]::Run($terraform.Source, $TerraformArguments, $currentLocation.ProviderPath, $logWriter)
 }
 catch {
     [Console]::Error.WriteLine("Terraform logging or execution failed: $($_.Exception.Message)")
