@@ -100,9 +100,9 @@ Copy the outputs into GitHub repository variables:
 - `apply_role_arn` -> `TF_APPLY_ROLE_ARN`
 - `destroy_role_arn` -> `DESTROY_ROLE_ARN`
 - `aws_account_id` -> `AWS_ACCOUNT_ID` and `DESTROY_AWS_ACCOUNT_ID`
-- Set `AWS_REGION`, `PORTFOLIO_BUCKET`, and `TF_HOSTED_ZONE_ID` to the values
+- Set `AWS_REGION`, `PORTFOLIO_BUCKET`, and `HOSTED_ZONE_ID` to the values
   used by the main stack.
-- Keep `TF_VARS_JSON` as a GitHub secret for `terraform/main` inputs.
+- Ensure the defaults in `terraform/main/variables.tf` match the intended infrastructure configuration for automatic apply and destroy.
 
 The OIDC provider ARN output should match `github_oidc_provider_arn` in the
 main stack variables. CloudFront, ACM, and WAF actions require wildcard resource

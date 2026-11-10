@@ -35,7 +35,8 @@ AWS and domain registration charges apply.
 ### Automatic Terraform apply
 
 - Scheduled runs and manual runs from `main` plan and apply the configuration in `terraform/main`, including its `modules` directory.
-- Configure `TF_APPLY_ROLE_ARN` from bootstrap output, plus `AWS_ACCOUNT_ID`, `AWS_REGION`, `PORTFOLIO_BUCKET`, `TF_HOSTED_ZONE_ID`, and secret `TF_VARS_JSON`.
+- Configure `TF_APPLY_ROLE_ARN` from bootstrap output, plus `AWS_ACCOUNT_ID`, `AWS_REGION`, `PORTFOLIO_BUCKET`, and `HOSTED_ZONE_ID`.
+- The workflows pass `AWS_REGION` and `PORTFOLIO_BUCKET` as Terraform inputs. Other inputs use the defaults in `terraform/main/variables.tf`; ensure they match the values used for the existing infrastructure before running either workflow.
 - Grant the role Terraform resource permissions, remote-state S3 access, and `ssm:GetParameter` (plus `kms:Decrypt` for a customer-key-encrypted email parameter).
 - Automatic apply blocks plans containing deletions or replacements. Review those changes and use a deliberate manual process.
 
@@ -76,12 +77,11 @@ Setup:
 3. Create a dedicated destroy OIDC role/provider outside this state. Restrict trust to this repository's `main` and `sts.amazonaws.com`. Grant required resource deletion, S3 state/lock, version, and KMS permissions in both regions. Protect role/workflow changes; do not reuse the deploy role. Move any managed OIDC provider to independent state and set `github_oidc_provider_arn`; deletion is blocked otherwise.
 4. Set repository variables:
    - `AWS_REGION`: portfolio region, matching the original tfvars.
-   - `DESTROY_AWS_ACCOUNT_ID`: portfolio AWS account ID.
-   - `DESTROY_ROLE_ARN`: independent destroy role ARN.
-   - `TF_STATE_BUCKET`, `TF_STATE_KEY`, `TF_STATE_REGION`: migrated state location.
-   - `TF_HOSTED_ZONE_ID`: ID from `terraform/creds/main.json`.
+   - `AWS_ACCOUNT_ID`: portfolio AWS account ID.
+   - `TF_DESTROY_ROLE_ARN`: independent destroy role ARN.
+   - `HOSTED_ZONE_ID`: ID from `terraform/creds/main.json`.
    - `PORTFOLIO_BUCKET`: portfolio bucket name, matching the state.
-5. Set secret `TF_VARS_JSON` to the original apply values, including optional and sensitive values. The workflow verifies the state and planned bucket.
+5. Verify the state location configured in the workflow and that Terraform defaults match the values used for the original apply. The workflow verifies the state and planned bucket.
 
 - Use one backend, key, and S3 lock for all Terraform operations. Do not run Terraform or write objects during cleanup/destroy; the lock has a gap between operations.
 - Cancellation, errors, or concurrent changes can leave partial destruction. Inspect the run and state before retrying.
