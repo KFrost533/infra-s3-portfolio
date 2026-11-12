@@ -26,7 +26,7 @@ AWS and domain registration charges apply.
 
 1. Publish as `KFrost533/infra-s3-portfolio`; protect `main`. Match the owner and repository IDs in `terraform/main/variables.tf`.
 2. Copy `terraform.tfvars.example`; set a unique bucket, registered domain, and hosted zone ID in local `terraform/creds/main.json`.
-3. Bootstrap the GitHub OIDC provider and set `github_oidc_provider_arn` to the bootstrap output. Do not delete a shared provider.
+3. Bootstrap the GitHub OIDC provider and portfolio bucket, and set `github_oidc_provider_arn` to the bootstrap output. For an existing bucket, follow the [bucket migration procedure](terraform/bootstrap/README.md#migrating-an-existing-portfolio-bucket) before running main. Do not delete a shared provider.
 4. Configure the S3 backend, then run `terraform init` and `terraform validate` in `terraform/main`. Terraform only adds records to the supplied zone.
 5. Delegate the domain to that zone; creating a hosted zone does not register a domain.
 6. Review the full plan before applying. The former managed zone leaves state but is not deleted. Keep the ACM validation CNAME for renewal.
@@ -43,7 +43,7 @@ AWS and domain registration charges apply.
 Bootstrap resources are managed separately from `terraform/main` and must
 survive its destruction:
 
-- `terraform/bootstrap` manages the GitHub OIDC provider and separate apply/destroy roles. Bootstrap it manually with administrative AWS credentials; see [its README](terraform/bootstrap/README.md).
+- `terraform/bootstrap` manages the portfolio bucket, its versioning and public access block, the GitHub OIDC provider, and separate apply/destroy roles. Bootstrap it manually with administrative AWS credentials; see [its README](terraform/bootstrap/README.md).
 - Create the state bucket `tf-kfrost533` in `ap-southeast-2` beforehand, with versioning, encryption, and public access blocked. Bootstrap stores its state under a separate key in this bucket.
 - Keep the Route 53 hosted zone and domain registration outside `terraform/main`; Terraform only manages records in the supplied zone.
 - Create the SSM email parameter (default `mail_address`) beforehand if the weekly report is enabled.
@@ -58,8 +58,8 @@ shared backend. ACM validation may time out before DNS propagation.
 ### Automatic infrastructure destruction
 
 - **Schedule:** Weekdays 19:00 JST (10:00 UTC), or manually from `main`. GitHub may delay or disable schedules.
-- **Protection:** The portfolio bucket has `prevent_destroy`; while it is in state, a full destroy plan fails before applying any changes. Its objects and versions are not emptied by the workflow. Scheduled destroy runs therefore fail while the bucket is managed.
-- **Limitations:** `prevent_destroy` applies only while the resource configuration is present; it does not prevent deletion through AWS or protect other resources from targeted operations. The workflow also rejects plans that delete the portfolio bucket, state bucket, or GitHub OIDC provider.
+- **Protection:** After migration, the portfolio bucket, its objects, versions, versioning and public access block remain under bootstrap management. Main's other infrastructure can be destroyed, and the workflow never empties the bucket. Bootstrap uses `prevent_destroy` for the bucket.
+- **Limitations:** Main destroys its CloudFront distribution and bucket policy, including the policy's HTTPS-only restriction; the bucket's public access block remains. `prevent_destroy` applies only while the resource configuration is present and does not prevent deletion through AWS. The workflow also rejects plans that delete the portfolio bucket, state bucket, or GitHub OIDC provider.
 - **Failures:** Permissions or dependencies may block deletion. Check failed runs and remaining resources; no alert is configured.
 
 Setup:
