@@ -35,7 +35,7 @@ AWS and domain registration charges apply.
 ### Automatic Terraform apply
 
 - Scheduled runs and manual runs from `main` plan and apply the configuration in `terraform/main`, including its `modules` directory.
-- Configure repository variable `AWS_REGION` and repository secrets `TF_APPLY_ROLE_ARN`, `AWS_ACCOUNT_ID`, `PORTFOLIO_BUCKET`, `HOSTED_ZONE_ID`, and `TF_STATE_BUCKET`. The state bucket secret must match the backend configured in Terraform.
+- Configure repository secrets `AWS_REGION`, `TF_APPLY_ROLE_ARN`, `AWS_ACCOUNT_ID`, `PORTFOLIO_BUCKET`, `HOSTED_ZONE_ID`, and `TF_STATE_BUCKET`. The state bucket secret must match the backend configured in Terraform.
 - The workflows pass `AWS_REGION` and `PORTFOLIO_BUCKET` as Terraform inputs. Other inputs use the defaults in `terraform/main/variables.tf`; ensure they match the values used for the existing infrastructure before running either workflow.
 - Grant the role Terraform resource permissions, remote-state S3 access, and `ssm:GetParameter` (plus `kms:Decrypt` for a customer-key-encrypted email parameter).
 - Automatic apply blocks plans containing deletions or replacements. Review those changes and use a deliberate manual process.
@@ -75,7 +75,8 @@ Setup:
 
   Verify `terraform state list` against the backup. Keep state, tfvars, and credentials private.
 3. Create a dedicated destroy OIDC role/provider outside this state. Restrict trust to this repository's `main` and `sts.amazonaws.com`. Grant required resource deletion, S3 state/lock, version, and KMS permissions in both regions. Protect role/workflow changes; do not reuse the deploy role. Move any managed OIDC provider to independent state and set `github_oidc_provider_arn`; deletion is blocked otherwise.
-4. Set repository variable `AWS_REGION` to the portfolio region. Set repository secrets:
+4. Set repository secrets:
+   - `AWS_REGION`: portfolio region, matching the original tfvars.
    - `AWS_ACCOUNT_ID`: portfolio AWS account ID.
    - `TF_DESTROY_ROLE_ARN`: independent destroy role ARN.
    - `HOSTED_ZONE_ID`: ID from `terraform/creds/main.json`.
@@ -94,7 +95,7 @@ The common rule group is counted and the Web ACL allows requests; it does not bl
 
 GitHub Actions deployment configuration:
 
-- Repository variable `AWS_REGION`: Terraform output `aws_region`.
+- Repository secret `AWS_REGION`: Terraform output `aws_region`.
 - Repository secret `PORTFOLIO_BUCKET`: Terraform output `bucket_name`.
 - Repository secret `DEPLOY_ROLE_ARN`: Terraform output `deploy_role_arn`.
 

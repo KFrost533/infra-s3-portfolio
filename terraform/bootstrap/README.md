@@ -155,8 +155,8 @@ Copy the outputs into GitHub repository secrets:
 - `apply_role_arn` -> `TF_APPLY_ROLE_ARN`
 - `destroy_role_arn` -> `TF_DESTROY_ROLE_ARN`
 - `aws_account_id` -> `AWS_ACCOUNT_ID`
-- Set `PORTFOLIO_BUCKET`, `HOSTED_ZONE_ID`, and `TF_STATE_BUCKET` secrets to
-  the values used by the main stack. Set the `AWS_REGION` repository variable.
+- Set `AWS_REGION`, `PORTFOLIO_BUCKET`, `HOSTED_ZONE_ID`, and `TF_STATE_BUCKET`
+  secrets to the values used by the main stack.
 - Ensure the defaults in `terraform/main/variables.tf` match the intended infrastructure configuration for automatic apply and destroy.
 
 The OIDC provider ARN output should match `github_oidc_provider_arn` in the

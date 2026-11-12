@@ -31,7 +31,7 @@ jobs:
 
       - name: Build standalone portfolio pages
         env:
-          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_ROLE_ARN: ${{ secrets.DEPLOY_ROLE_ARN }}
           PORTFOLIO_BUCKET: ${{ secrets.PORTFOLIO_BUCKET }}
           SITE_DIRECTORY: ${{ runner.temp }}/portfolio-site
@@ -48,14 +48,14 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ secrets.AWS_REGION }}
           role-to-assume: ${{ secrets.DEPLOY_ROLE_ARN }}
           mask-aws-account-id: true
 
       - name: Find the portfolio CloudFront distribution
         id: distribution
         env:
-          AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
           PORTFOLIO_BUCKET: ${{ secrets.PORTFOLIO_BUCKET }}
         run: |
           python3 - <<'PY'
