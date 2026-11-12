@@ -90,7 +90,8 @@ terraform apply
 Actions use service-level wildcards, scoped to the project's resources where
 the AWS service supports resource-level permissions. The apply workflow blocks
 plans containing deletes or replacements; the separate destroy role can delete
-project infrastructure and portfolio bucket versions. Both roles trust only
+project infrastructure, but the main configuration prevents deletion of the
+portfolio bucket and blocks a full destroy. Both roles trust only
 this repository's `main` branch subject. The state bucket and bootstrap state
 are not accessible to either GitHub role except the main state's object and
 lockfile paths.

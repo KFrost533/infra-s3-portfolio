@@ -48,19 +48,19 @@ survive its destruction:
 - Keep the Route 53 hosted zone and domain registration outside `terraform/main`; Terraform only manages records in the supplied zone.
 - Create the SSM email parameter (default `mail_address`) beforehand if the weekly report is enabled.
 
-For a rebuild, keep the remote state bucket and an empty or accurate state.
-Terraform destroy leaves an empty state; do not delete or manually edit the
-state object. Resources deleted outside Terraform require state reconciliation
-before automatic apply.
+For a rebuild, keep the remote state bucket and an accurate state. Do not delete
+or manually edit the state object. Resources deleted outside Terraform require
+state reconciliation before automatic apply.
 
 Use authorised credentials. Keep variables and state private; use a secure
 shared backend. ACM validation may time out before DNS propagation.
 
 ### Automatic infrastructure destruction
 
-- **Schedule:** Daily 19:00 JST (10:00 UTC), or manually from `main`. GitHub may delay or disable schedules; disable this workflow if deletion is not intended.
-- **Deletion:** Destroys resources in the selected state. Portfolio bucket objects, versions, and delete markers are permanently deleted; the site goes offline. Hosted zones, domains, and out-of-state resources remain.
-- **Failures:** Object Lock, permissions, or dependencies may block deletion. Check failed runs and remaining resources; no alert is configured.
+- **Schedule:** Weekdays 19:00 JST (10:00 UTC), or manually from `main`. GitHub may delay or disable schedules.
+- **Protection:** The portfolio bucket has `prevent_destroy`; while it is in state, a full destroy plan fails before applying any changes. Its objects and versions are not emptied by the workflow. Scheduled destroy runs therefore fail while the bucket is managed.
+- **Limitations:** `prevent_destroy` applies only while the resource configuration is present; it does not prevent deletion through AWS or protect other resources from targeted operations. The workflow also rejects plans that delete the portfolio bucket, state bucket, or GitHub OIDC provider.
+- **Failures:** Permissions or dependencies may block deletion. Check failed runs and remaining resources; no alert is configured.
 
 Setup:
 
@@ -83,7 +83,7 @@ Setup:
    - `TF_STATE_BUCKET`: the state bucket configured in the Terraform backend.
 5. Verify the state location configured in the workflow and that Terraform defaults match the values used for the original apply. The workflow verifies the state and planned bucket.
 
-- Use one backend, key, and S3 lock for all Terraform operations. Do not run Terraform or write objects during cleanup/destroy; the lock has a gap between operations.
+- Use one backend, key, and S3 lock for all Terraform operations.
 - Cancellation, errors, or concurrent changes can leave partial destruction. Inspect the run and state before retrying.
 
 ### Optional AWS WAF

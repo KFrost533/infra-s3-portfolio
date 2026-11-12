@@ -92,7 +92,7 @@ jobs:
       - name: Plan destruction
         run: terraform plan -destroy -input=false -lock-timeout=5m -out="$RUNNER_TEMP/destroy.tfplan"
 
-      - name: Empty the managed portfolio bucket
+      - name: Reject protected resource deletion
         run: |
           set -euo pipefail
           plan="$RUNNER_TEMP/destroy-plan.json"
@@ -108,39 +108,14 @@ jobs:
             exit 1
           fi
           if ! jq -e --arg bucket "$PORTFOLIO_BUCKET" '
-            [.resource_changes[]? |
-              select(.address == "module.s3.aws_s3_bucket.portfolio" and
-                     (.change.actions | index("delete")))] |
-            length <= 1 and all(.[]; .change.before.bucket == $bucket)
+            all(.resource_changes[]?;
+              ((.change.actions | index("delete")) == null) or
+              (.address != "module.s3.aws_s3_bucket.portfolio" and
+               (.type != "aws_s3_bucket" or .change.before.bucket != $bucket)))
           ' "$plan" >/dev/null; then
-            echo "The planned portfolio bucket does not match PORTFOLIO_BUCKET." >&2
+            echo "The plan would delete the protected portfolio bucket." >&2
             exit 1
           fi
-          if ! jq -e '
-            any(.resource_changes[]?;
-              .address == "module.s3.aws_s3_bucket.portfolio" and
-              (.change.actions | index("delete")))
-          ' "$plan" >/dev/null; then
-            echo "No portfolio bucket deletion is planned; skipping object cleanup."
-            exit 0
-          fi
-
-          while :; do
-            aws s3api list-object-versions --bucket "$PORTFOLIO_BUCKET" \
-              --max-keys 1000 --no-paginate --output json --no-cli-pager > "$RUNNER_TEMP/versions.json"
-            jq '{Objects: [(.Versions // [])[], (.DeleteMarkers // [])[] |
-                {Key, VersionId}], Quiet: true}' "$RUNNER_TEMP/versions.json" > "$RUNNER_TEMP/delete.json"
-            if [[ "$(jq '.Objects | length' "$RUNNER_TEMP/delete.json")" == 0 ]]; then
-              break
-            fi
-            aws s3api delete-objects --bucket "$PORTFOLIO_BUCKET" \
-              --delete "file://$RUNNER_TEMP/delete.json" --output json --no-cli-pager > "$RUNNER_TEMP/deleted.json"
-            if ! jq -e '(.Errors // []) | length == 0' "$RUNNER_TEMP/deleted.json" >/dev/null; then
-              echo "S3 reported errors deleting object versions:" >&2
-              jq '.Errors' "$RUNNER_TEMP/deleted.json" >&2
-              exit 1
-            fi
-          done
 
       - name: Apply destruction plan
         run: terraform apply -input=false -lock-timeout=5m "$RUNNER_TEMP/destroy.tfplan"

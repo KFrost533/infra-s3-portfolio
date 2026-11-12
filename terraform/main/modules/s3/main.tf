@@ -1,5 +1,9 @@
 resource "aws_s3_bucket" "portfolio" {
   bucket = var.bucket_name
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "portfolio" {
