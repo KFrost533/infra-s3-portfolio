@@ -95,13 +95,13 @@ this repository's `main` branch subject. The state bucket and bootstrap state
 are not accessible to either GitHub role except the main state's object and
 lockfile paths.
 
-Copy the outputs into GitHub repository variables:
+Copy the outputs into GitHub repository secrets:
 
 - `apply_role_arn` -> `TF_APPLY_ROLE_ARN`
-- `destroy_role_arn` -> `DESTROY_ROLE_ARN`
-- `aws_account_id` -> `AWS_ACCOUNT_ID` and `DESTROY_AWS_ACCOUNT_ID`
-- Set `AWS_REGION`, `PORTFOLIO_BUCKET`, and `HOSTED_ZONE_ID` to the values
-  used by the main stack.
+- `destroy_role_arn` -> `TF_DESTROY_ROLE_ARN`
+- `aws_account_id` -> `AWS_ACCOUNT_ID`
+- Set `PORTFOLIO_BUCKET`, `HOSTED_ZONE_ID`, and `TF_STATE_BUCKET` secrets to
+  the values used by the main stack. Set the `AWS_REGION` repository variable.
 - Ensure the defaults in `terraform/main/variables.tf` match the intended infrastructure configuration for automatic apply and destroy.
 
 The OIDC provider ARN output should match `github_oidc_provider_arn` in the

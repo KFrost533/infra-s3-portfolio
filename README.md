@@ -30,12 +30,12 @@ AWS and domain registration charges apply.
 4. Configure the S3 backend, then run `terraform init` and `terraform validate` in `terraform/main`. Terraform only adds records to the supplied zone.
 5. Delegate the domain to that zone; creating a hosted zone does not register a domain.
 6. Review the full plan before applying. The former managed zone leaves state but is not deleted. Keep the ACM validation CNAME for renewal.
-7. Set GitHub Actions variables from Terraform outputs.
+7. Set GitHub Actions variables and secrets from Terraform outputs.
 
 ### Automatic Terraform apply
 
 - Scheduled runs and manual runs from `main` plan and apply the configuration in `terraform/main`, including its `modules` directory.
-- Configure `TF_APPLY_ROLE_ARN` from bootstrap output, plus `AWS_ACCOUNT_ID`, `AWS_REGION`, `PORTFOLIO_BUCKET`, and `HOSTED_ZONE_ID`.
+- Configure repository variable `AWS_REGION` and repository secrets `TF_APPLY_ROLE_ARN`, `AWS_ACCOUNT_ID`, `PORTFOLIO_BUCKET`, `HOSTED_ZONE_ID`, and `TF_STATE_BUCKET`. The state bucket secret must match the backend configured in Terraform.
 - The workflows pass `AWS_REGION` and `PORTFOLIO_BUCKET` as Terraform inputs. Other inputs use the defaults in `terraform/main/variables.tf`; ensure they match the values used for the existing infrastructure before running either workflow.
 - Grant the role Terraform resource permissions, remote-state S3 access, and `ssm:GetParameter` (plus `kms:Decrypt` for a customer-key-encrypted email parameter).
 - Automatic apply blocks plans containing deletions or replacements. Review those changes and use a deliberate manual process.
@@ -75,12 +75,12 @@ Setup:
 
   Verify `terraform state list` against the backup. Keep state, tfvars, and credentials private.
 3. Create a dedicated destroy OIDC role/provider outside this state. Restrict trust to this repository's `main` and `sts.amazonaws.com`. Grant required resource deletion, S3 state/lock, version, and KMS permissions in both regions. Protect role/workflow changes; do not reuse the deploy role. Move any managed OIDC provider to independent state and set `github_oidc_provider_arn`; deletion is blocked otherwise.
-4. Set repository variables:
-   - `AWS_REGION`: portfolio region, matching the original tfvars.
+4. Set repository variable `AWS_REGION` to the portfolio region. Set repository secrets:
    - `AWS_ACCOUNT_ID`: portfolio AWS account ID.
    - `TF_DESTROY_ROLE_ARN`: independent destroy role ARN.
    - `HOSTED_ZONE_ID`: ID from `terraform/creds/main.json`.
    - `PORTFOLIO_BUCKET`: portfolio bucket name, matching the state.
+   - `TF_STATE_BUCKET`: the state bucket configured in the Terraform backend.
 5. Verify the state location configured in the workflow and that Terraform defaults match the values used for the original apply. The workflow verifies the state and planned bucket.
 
 - Use one backend, key, and S3 lock for all Terraform operations. Do not run Terraform or write objects during cleanup/destroy; the lock has a gap between operations.
@@ -92,11 +92,16 @@ Set `enable_waf = true` to attach a CloudFront Web ACL in `us-east-1` (default: 
 
 The common rule group is counted and the Web ACL allows requests; it does not block. Internal terminating rules may stop later group rules. Review `PortfolioCommonRules` in CloudWatch before considering blocking. Sampling/logging are off. Disabling WAF removes it on the next apply. Review the plan's state move for the former root-address Web ACL.
 
-GitHub Actions variables:
+GitHub Actions deployment configuration:
 
-- `AWS_REGION`: Terraform output `aws_region`
-- `PORTFOLIO_BUCKET`: Terraform output `bucket_name`
-- `AWS_ROLE_ARN`: Terraform output `deploy_role_arn`
+- Repository variable `AWS_REGION`: Terraform output `aws_region`.
+- Repository secret `PORTFOLIO_BUCKET`: Terraform output `bucket_name`.
+- Repository secret `DEPLOY_ROLE_ARN`: Terraform output `deploy_role_arn`.
+
+Secrets mask exact matching values in Actions logs, but masking is not guaranteed
+for transformed values. Review logs and artifacts before publishing them. Values
+already committed to the repository or its history remain public; using Secrets
+does not remove them.
 
 
 ### Terraform logs
