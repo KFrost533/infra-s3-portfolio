@@ -1,11 +1,13 @@
 name: Deploy portfolio HTML files to S3
 
 on:
+  schedule:
+    # JST 09:00 AM
+    - cron: "20 00 * * 1-5"
   push:
     branches: [main]
     paths:
       - "portfolio/**"
-      - "scripts/build_portfolio.py"
       - ".github/workflows/s3_portfolio_upload.yml"
   workflow_dispatch:
 
