@@ -1,25 +1,25 @@
-resource "aws_s3_bucket" "portfolio" {
+data "aws_s3_bucket" "portfolio" {
   bucket = var.bucket_name
+}
 
+removed {
+  from = aws_s3_bucket.portfolio
   lifecycle {
-    prevent_destroy = true
+    destroy = false
   }
 }
 
-resource "aws_s3_bucket_public_access_block" "portfolio" {
-  bucket = aws_s3_bucket.portfolio.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+removed {
+  from = aws_s3_bucket_public_access_block.portfolio
+  lifecycle {
+    destroy = false
+  }
 }
 
-resource "aws_s3_bucket_versioning" "portfolio" {
-  bucket = aws_s3_bucket.portfolio.id
-
-  versioning_configuration {
-    status = "Enabled"
+removed {
+  from = aws_s3_bucket_versioning.portfolio
+  lifecycle {
+    destroy = false
   }
 }
 
@@ -28,7 +28,7 @@ data "aws_iam_policy_document" "bucket" {
     sid     = "AllowCloudFrontRead"
     actions = ["s3:GetObject"]
     resources = [
-      "${aws_s3_bucket.portfolio.arn}/*"
+      "${data.aws_s3_bucket.portfolio.arn}/*"
     ]
 
     principals {
@@ -48,8 +48,8 @@ data "aws_iam_policy_document" "bucket" {
     effect  = "Deny"
     actions = ["s3:*"]
     resources = [
-      aws_s3_bucket.portfolio.arn,
-      "${aws_s3_bucket.portfolio.arn}/*"
+      data.aws_s3_bucket.portfolio.arn,
+      "${data.aws_s3_bucket.portfolio.arn}/*"
     ]
 
     principals {
@@ -66,8 +66,6 @@ data "aws_iam_policy_document" "bucket" {
 }
 
 resource "aws_s3_bucket_policy" "portfolio" {
-  bucket = aws_s3_bucket.portfolio.id
+  bucket = data.aws_s3_bucket.portfolio.id
   policy = data.aws_iam_policy_document.bucket.json
-
-  depends_on = [aws_s3_bucket_public_access_block.portfolio]
 }

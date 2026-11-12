@@ -104,10 +104,12 @@ jobs:
             exit 1
           fi
           if ! jq -e --arg bucket "$PORTFOLIO_BUCKET" '
-            [.resource_changes[]? |
-              select(.address == "module.s3.aws_s3_bucket.portfolio")] |
+            [.planned_values.root_module.child_modules[]? |
+              select(.address == "module.s3") |
+              .resources[]? |
+              select(.address == "module.s3.data.aws_s3_bucket.portfolio" and .mode == "data")] |
             length == 1 and
-            all(.[]; (.change.after.bucket // .change.before.bucket) == $bucket)
+            all(.[]; .values.bucket == $bucket)
           ' "$plan" >/dev/null; then
             echo "The planned portfolio bucket does not match PORTFOLIO_BUCKET." >&2
             exit 1
