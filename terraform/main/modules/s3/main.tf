@@ -2,27 +2,6 @@ data "aws_s3_bucket" "portfolio" {
   bucket = var.bucket_name
 }
 
-removed {
-  from = aws_s3_bucket.portfolio
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = aws_s3_bucket_public_access_block.portfolio
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = aws_s3_bucket_versioning.portfolio
-  lifecycle {
-    destroy = false
-  }
-}
-
 data "aws_iam_policy_document" "bucket" {
   statement {
     sid     = "AllowCloudFrontRead"

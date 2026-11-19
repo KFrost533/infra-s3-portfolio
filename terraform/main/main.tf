@@ -86,11 +86,6 @@ module "waf" {
   }
 }
 
-moved {
-  from = aws_wafv2_web_acl.portfolio[0]
-  to   = module.waf[0].aws_wafv2_web_acl.portfolio
-}
-
 module "cloudfront" {
   source = "./modules/cloudfront"
 
