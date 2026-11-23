@@ -128,12 +128,12 @@ class BuildPortfolioTests(unittest.TestCase):
             for language, expected in {
                 "jp": (
                     "4年7か月", "2022.05〜2023.10", "2023.10〜2024.07",
-                    "2024.07〜2025.12", "2026.01〜現在", "11か月・2026年11月時点",
+                    "2024.07〜2025.12", "2026.01〜2026.12", "1年",
                     "重複月は1回のみ集計",
                 ),
                 "en": (
                     "4 years 7 months", "May 2022 – Oct 2023", "Oct 2023 – Jul 2024",
-                    "Jul 2024 – Dec 2025", "Jan 2026 – Present", "11 months, as of November 2026",
+                    "Jul 2024 – Dec 2025", "Jan 2026 – Dec 2026", "1 year",
                     "overlapping months counted once",
                 ),
             }.items():
